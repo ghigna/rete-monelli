@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stalkers di Comunità — Rete Monelli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link id="font-link" href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#0000ff;--accent-dark:#0000cc;--accent-light:#e8e8ff;--accent-mid:#9999ff;
+  --bg:#f5f5ff;--ink:#0a0a2e;--muted:#6666aa;--panel:#fff;--border:#d0d0ee;--spes:#ffcc00;
+  --font:'Nunito',sans-serif;
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--ink)}
+#app{display:flex;flex-direction:column;height:100vh}
+
+/* NAV */
+#nav{display:flex;background:var(--accent);flex-shrink:0;min-height:52px;align-items:stretch}
+.nav-tab{padding:0 20px;display:flex;align-items:center;gap:7px;font-family:var(--font);font-size:.78rem;font-weight:700;color:rgba(255,255,255,.5);cursor:pointer;border:none;background:none;letter-spacing:.05em;text-transform:uppercase;border-bottom:3px solid transparent;transition:all .18s;white-space:nowrap}
+.nav-tab.active{color:#fff;border-bottom-color:var(--spes)}
+.nav-tab:hover:not(.active){color:rgba(255,255,255,.8)}
+#nav-title{padding:0 20px;display:flex;align-items:center;gap:10px;margin-right:auto}
+#nav-title h1{font-size:.95rem;font-weight:800;color:#fff;letter-spacing:-.01em}
+#nav-title span{font-size:.7rem;color:rgba(255,255,255,.45);font-weight:400}
+#sync-status{display:flex;align-items:center;gap:6px;padding:0 16px;font-size:.7rem;color:rgba(255,255,255,.4)}
+#sync-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3);transition:background .3s;flex-shrink:0}
+#sync-dot.ok{background:#4cff9a}
+#sync-dot.saving{background:#ffcc00;animation:pulse .8s infinite}
+#sync-dot.error{background:#ff6666}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* PAGES */
+#page-mappa,#page-ragnatela,#page-stile{display:none;flex:1;overflow:hidden}
+#page-mappa.active{display:flex;flex-direction:column}
+#page-ragnatela.active{display:flex}
+#page-stile.active{display:block;overflow-y:auto}
+
+/* DASHBOARD */
+#dashboard{display:flex;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel)}
+.dash-card{flex:1;padding:11px 16px;border-right:1px solid var(--border);cursor:pointer;transition:background .15s;position:relative;user-select:none}
+.dash-card:last-child{border-right:none}
+.dash-card:hover{background:var(--bg)}
+.dash-card.active-filter{background:var(--accent-light)}
+.dash-num{font-size:1.5rem;font-weight:800;line-height:1;color:var(--ink)}
+.dash-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:3px}
+.dash-bar{position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0}
+.dash-total .dash-bar{background:var(--accent)}
+.dash-da .dash-bar{background:#f5c542}
+.dash-cnt .dash-bar{background:#4a9eff}
+.dash-col .dash-num{color:#2ecc71}
+.dash-col .dash-bar{background:#2ecc71}
+.dash-non .dash-bar{background:#e74c3c}
+
+/* MAP AREA inside mappa page */
+#map-area{display:flex;flex:1;overflow:hidden;position:relative}
+
+/* SIDEBAR */
+#sidebar{width:300px;flex-shrink:0;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--border);overflow:hidden}
+#filter-bar{padding:11px 13px;border-bottom:1px solid var(--border);background:var(--bg)}
+#search-input{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.81rem;background:#fff;color:var(--ink);outline:none;margin-bottom:9px}
+#search-input:focus{border-color:var(--accent)}
+.filter-row{display:flex;gap:5px;flex-wrap:wrap}
+.filter-btn{font-size:.66rem;padding:3px 8px;border-radius:20px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted);transition:all .15s;white-space:nowrap}
+#stato-filters{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)}
+.stato-btn{font-size:.66rem;padding:3px 8px;border-radius:6px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted)}
+.stato-btn.active{border-color:currentColor;background:var(--accent-light)}
+#list-container{flex:1;overflow-y:auto}
+#list-count{font-size:.69rem;color:var(--muted);padding:7px 13px 3px;font-weight:700}
+.list-item{padding:9px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
+.list-item:hover{background:var(--bg)}
+.list-item.selected{background:var(--accent-light);border-left:3px solid var(--accent)}
+.list-item.spes-item{border-left:3px solid var(--spes);background:#fffbe6}
+.list-item.spes-item.selected{background:#fff5b0}
+.item-name{font-size:.81rem;font-weight:700;line-height:1.3}
+.item-meta{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap}
+.cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.item-cat{font-size:.67rem;color:var(--muted)}
+.stato-badge{font-size:.58rem;padding:1px 5px;border-radius:4px;margin-left:auto;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.spes-label{font-size:.58rem;color:#7a5c00;background:#fff3b0;border:1px solid var(--spes);border-radius:4px;padding:1px 5px;font-weight:700}
+.stale-badge{font-size:.58rem;color:#a05000;background:#fff0e0;border:1px solid #ffcc88;border-radius:4px;padding:1px 5px;font-weight:700}
+
+/* MAP */
+#map{flex:1}
+.popup-wrap{font-family:var(--font);min-width:230px;max-width:290px}
+.popup-nome{font-size:.93rem;font-weight:800;line-height:1.25;margin-bottom:5px}
+.popup-spes-tag{display:inline-block;font-size:.6rem;background:var(--spes);color:#664d00;border-radius:4px;padding:1px 7px;font-weight:700;margin-bottom:7px}
+.popup-cat{font-size:.69rem;color:var(--muted);margin-bottom:7px;display:flex;align-items:center;gap:5px;font-weight:600}
+.popup-desc{font-size:.76rem;line-height:1.55;color:#333355;margin-bottom:9px;background:var(--bg);border-radius:6px;padding:7px 9px}
+.popup-field{font-size:.74rem;margin-bottom:5px}
+.popup-field label{font-weight:700;color:var(--muted);display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.popup-actions{margin-top:10px}
+.popup-btn{font-size:.72rem;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-family:var(--font);font-weight:700;background:var(--accent);color:#fff}
+.stato-da{background:#fff3cd;color:#7a5c00}
+.stato-contattato{background:#ddeeff;color:#003d80}
+.stato-collabo{background:#d4f5e6;color:#0a5c30}
+.stato-non{background:#ffdde0;color:#7a1020}
+
+/* EDIT PANEL */
+#edit-panel{position:fixed;bottom:0;left:300px;right:0;background:#fff;border-top:3px solid var(--accent);padding:13px 18px;transform:translateY(100%);transition:transform .25s ease;z-index:1000;box-shadow:0 -4px 24px rgba(0,0,0,.1)}
+#edit-panel.open{transform:translateY(0)}
+#edit-panel h3{font-size:.93rem;font-weight:800;margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.edit-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.edit-field{display:flex;flex-direction:column;gap:3px;min-width:120px;flex:1}
+.edit-field label{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.edit-field input,.edit-field select,.edit-field textarea{padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.79rem;color:var(--ink);background:var(--bg);outline:none}
+.edit-field input:focus,.edit-field select:focus,.edit-field textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:46px}
+#collab-list{max-height:100px;overflow-y:auto;border:1.5px solid var(--border);border-radius:6px;background:var(--bg);padding:4px;display:flex;flex-direction:column;gap:2px}
+.collab-check{display:flex;align-items:center;gap:6px;padding:2px 4px;border-radius:4px;cursor:pointer;font-size:.74rem;font-weight:600}
+.collab-check:hover{background:var(--accent-light)}
+.collab-check input[type=checkbox]{accent-color:var(--accent);cursor:pointer}
+.edit-actions{display:flex;gap:7px;margin-top:9px;align-items:center}
+.save-btn{background:var(--accent);color:#fff;border:none;padding:7px 15px;border-radius:6px;font-family:var(--font);font-size:.79rem;font-weight:700;cursor:pointer}
+.save-btn:disabled{opacity:.4;cursor:not-allowed}
+.cancel-btn{background:var(--bg);color:var(--muted);border:1.5px solid var(--border);padding:7px 13px;border-radius:6px;font-family:var(--font);font-size:.79rem;font-weight:600;cursor:pointer}
+#save-feedback{font-size:.73rem;color:var(--muted);font-weight:600}
+
+/* LEGEND */
+#legend{position:absolute;bottom:20px;right:12px;z-index:500;background:rgba(255,255,255,.97);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:.69rem;box-shadow:0 2px 16px rgba(0,0,0,.08)}
+#legend h4{font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;font-weight:700}
+.leg-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-weight:600}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+/* PRESENTATION */
+body.presenting #sidebar{display:none}
+body.presenting #dashboard{display:none}
+body.presenting #edit-panel{left:0}
+body.presenting #btn-present{opacity:1;background:var(--accent)}
+#page-ragnatela{position:relative}
+#ragnatela-map{position:absolute;inset:0;z-index:0}
+#ragnatela-info{position:absolute;top:16px;left:16px;z-index:1000;background:rgba(0,0,20,.82);border:1px solid rgba(100,100,255,.35);border-radius:10px;padding:13px 16px;color:rgba(255,255,255,.8);font-size:.76rem;max-width:240px;backdrop-filter:blur(8px)}
+#ragnatela-info h3{font-size:.88rem;font-weight:800;color:#fff;margin-bottom:5px}
+#ragnatela-info p{font-size:.71rem;color:rgba(255,255,255,.5);line-height:1.5}
+#ragnatela-count{margin-top:8px;font-size:.7rem;color:var(--spes);font-weight:700}
+.rag-tooltip{font-family:var(--font);font-size:.78rem;background:rgba(0,0,20,.9);border:1px solid rgba(100,100,255,.4);border-radius:6px;color:#fff;padding:5px 9px;box-shadow:0 2px 12px rgba(0,0,0,.4)}
+
+/* STILE */
+#page-stile{background:var(--bg);padding:32px}
+.stile-wrap{max-width:720px;margin:0 auto}
+.stile-wrap h2{font-size:1.4rem;font-weight:800;color:var(--ink);margin-bottom:6px}
+.stile-wrap>p{font-size:.82rem;color:var(--muted);margin-bottom:28px}
+.stile-section{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:22px 24px;margin-bottom:20px}
+.stile-section h3{font-size:.85rem;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.07em;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:8px}
+.stile-row{display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap}
+.stile-row label{font-size:.78rem;font-weight:700;color:var(--ink);min-width:130px}
+.stile-row input[type=color]{width:44px;height:32px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px;background:#fff}
+.color-hex{font-size:.75rem;font-weight:700;color:var(--muted);min-width:64px;font-family:monospace}
+.font-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:4px}
+.font-card{border:2px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .15s}
+.font-card:hover,.font-card.selected{border-color:var(--accent);background:var(--accent-light)}
+.font-card .font-name{font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+.font-card .font-sample{font-size:1rem;color:var(--ink)}
+.stile-apply{background:var(--accent);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-family:var(--font);font-size:.82rem;font-weight:800;cursor:pointer;margin-top:6px}
+.stile-reset{background:var(--bg);color:var(--muted);border:1.5px solid var(--border);padding:10px 18px;border-radius:8px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;margin-top:6px;margin-left:8px}
+.preview-box{margin-top:14px;border:1.5px dashed var(--border);border-radius:8px;padding:14px 18px;background:var(--bg)}
+.preview-header{height:36px;border-radius:6px;background:var(--accent);display:flex;align-items:center;padding:0 14px;margin-bottom:10px}
+.preview-header span{color:#fff;font-weight:800;font-size:.82rem}
+.preview-btn{display:inline-block;background:var(--accent);color:#fff;border-radius:5px;padding:5px 12px;font-size:.76rem;font-weight:700}
+.preview-text{font-size:.82rem;color:var(--ink);margin-bottom:8px}
+.preview-muted{font-size:.72rem;color:var(--muted)}
+
+/* LOADING */
+#loading-overlay{position:fixed;inset:0;background:rgba(245,245,255,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000;gap:14px}
+#loading-overlay h2{font-size:1.4rem;font-weight:800;color:var(--accent)}
+#loading-overlay p{font-size:.81rem;color:var(--muted);font-weight:600}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.leaflet-popup-content-wrapper{border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.14);border:1.5px solid var(--border)}
+.leaflet-popup-content{margin:13px 15px}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--accent-mid);border-radius:2px}
+</style>
+</head>
+<body>
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <h2>Rete Monelli</h2>
+  <p id="loading-msg">Caricamento dati…</p>
+</div>
+
+<div id="app">
+  <div id="nav">
+    <div id="nav-title"><h1>Stalkers di Comunità</h1><span>Municipio III · Roma</span></div>
+    <button class="nav-tab active" onclick="showPage('mappa',this)">🗺 Mappa</button>
+    <button class="nav-tab" onclick="showPage('ragnatela',this)">🕸 Ragnatela</button>
+    <button class="nav-tab" onclick="showPage('stile',this)">🎨 Stile</button>
+    <div id="sync-status"><div id="sync-dot"></div><span id="sync-label">—</span></div>
+  </div>
+
+  <div id="page-mappa" class="active">
+
+    <!-- DASHBOARD -->
+    <div id="dashboard">
+      <div class="dash-card dash-total" onclick="filterDash('tutti')" title="Mostra tutte">
+        <div class="dash-num" id="d-total">—</div>
+        <div class="dash-label">Totale</div>
+        <div class="dash-bar"></div>
+      </div>
+      <div class="dash-card dash-col" onclick="filterDash('In collaborazione')" title="Filtra per collaborazione">
+        <div class="dash-num" id="d-col">—</div>
+        <div class="dash-label">In collaborazione</div>
+        <div class="dash-bar"></div>
+      </div>
+      <div class="dash-card dash-cnt" onclick="filterDash('Contattato')" title="Filtra per contattati">
+        <div class="dash-num" id="d-cnt">—</div>
+        <div class="dash-label">Contattati</div>
+        <div class="dash-bar"></div>
+      </div>
+      <div class="dash-card dash-da" onclick="filterDash('Da contattare')" title="Filtra per da contattare">
+        <div class="dash-num" id="d-da">—</div>
+        <div class="dash-label">Da contattare</div>
+        <div class="dash-bar"></div>
+      </div>
+      <div class="dash-card dash-non" onclick="filterDash('Non interessato')" title="Filtra per non interessati">
+        <div class="dash-num" id="d-non">—</div>
+        <div class="dash-label">Non interessati</div>
+        <div class="dash-bar"></div>
+      </div>
+    </div>
+
+    <div id="map-area">
+      <div id="sidebar">
+        <div id="filter-bar">
+          <input type="text" id="search-input" placeholder="Cerca per nome o descrizione…">
+          <div class="filter-row" id="cat-filters"></div>
+          <div id="stato-filters">
+            <button class="stato-btn active" data-stato="tutti">Tutti</button>
+            <button class="stato-btn" data-stato="Da contattare" style="color:#7a5c00">Da contattare</button>
+            <button class="stato-btn" data-stato="Contattato" style="color:#003d80">Contattato</button>
+            <button class="stato-btn" data-stato="In collaborazione" style="color:#0a5c30">In collab.</button>
+            <button class="stato-btn" data-stato="Non interessato" style="color:#7a1020">Non int.</button>
+          </div>
+        </div>
+        <div id="map-controls" style="padding:7px 13px;border-bottom:1px solid var(--border);background:var(--bg)">
+          <button id="btn-labels" onclick="toggleLabels()" style="font-size:.65rem;padding:3px 10px;border-radius:6px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted);transition:all .15s">🏷 Etichette: off</button>
+        </div>
+        <div id="list-count"></div>
+        <div id="list-container"></div>
+      </div>
+      <div id="map"></div>
+      <button id="btn-present" onclick="togglePresentation()" style="position:absolute;top:12px;right:12px;z-index:500;background:var(--ink);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-family:var(--font);font-size:.7rem;font-weight:700;cursor:pointer;opacity:.75">⛶ Presentazione</button>
+      <button id="btn-suggest" onclick="openSuggest()" style="position:absolute;bottom:32px;left:12px;z-index:500;background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:20px;font-family:var(--font);font-size:.75rem;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,255,.3)">+ Suggerisci una realtà</button>
+    </div>
+
+  </div>
+
+  <div id="page-ragnatela">
+    <div id="ragnatela-map"></div>
+    <div id="ragnatela-info">
+      <h3>🕸 Ragnatela</h3>
+      <p>Fili gialli = con Spes. Fili bianchi = tra realtà. Naviga liberamente.</p>
+      <div id="ragnatela-count">— connessioni</div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15)">
+        <div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Mostra solo connessioni di</div>
+        <select id="rag-focus" onchange="drawRagnatela()" style="width:100%;padding:5px 7px;border-radius:6px;border:1px solid rgba(100,100,255,.3);background:rgba(0,0,40,.8);color:#fff;font-family:var(--font);font-size:.74rem;outline:none">
+          <option value="">— tutte —</option>
+        </select>
+      </div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15);display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.05em">Stile fili</div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.67rem;color:rgba(255,255,255,.55);margin-bottom:2px"><span>Spessore Spes</span><span id="lbl-w-spes">1.5px</span></div>
+          <input type="range" id="rag-w-spes" min="0.5" max="6" step="0.5" value="1.5" oninput="updateRagStyle()" style="width:100%;accent-color:#ffcc00">
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.67rem;color:rgba(255,255,255,.55);margin-bottom:2px"><span>Opacità Spes</span><span id="lbl-o-spes">45%</span></div>
+          <input type="range" id="rag-o-spes" min="5" max="100" step="5" value="45" oninput="updateRagStyle()" style="width:100%;accent-color:#ffcc00">
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.67rem;color:rgba(255,255,255,.55);margin-bottom:2px"><span>Spessore peer</span><span id="lbl-w-peer">0.8px</span></div>
+          <input type="range" id="rag-w-peer" min="0.5" max="6" step="0.5" value="0.8" oninput="updateRagStyle()" style="width:100%;accent-color:#aaaaff">
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.67rem;color:rgba(255,255,255,.55);margin-bottom:2px"><span>Opacità peer</span><span id="lbl-o-peer">15%</span></div>
+          <input type="range" id="rag-o-peer" min="5" max="100" step="5" value="15" oninput="updateRagStyle()" style="width:100%;accent-color:#aaaaff">
+        </div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1">
+            <div style="font-size:.67rem;color:rgba(255,255,255,.55);margin-bottom:2px">Colore Spes</div>
+            <input type="color" id="rag-c-spes" value="#ffcc00" oninput="updateRagStyle()" style="width:100%;height:26px;border-radius:5px;border:none;cursor:pointer">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:.67rem;color:rgba(255,255,255,.55);margin-bottom:2px">Colore peer</div>
+            <input type="color" id="rag-c-peer" value="#ffffff" oninput="updateRagStyle()" style="width:100%;height:26px;border-radius:5px;border:none;cursor:pointer">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-stile">
+    <div class="stile-wrap">
+      <h2>🎨 Stile</h2>
+      <p>Colori e font. Le modifiche si applicano in tempo reale.</p>
+      <div class="stile-section">
+        <h3>Colori</h3>
+        <div class="stile-row"><label>Colore principale</label><input type="color" id="color-accent" value="#0000ff" oninput="livePreview()"><span class="color-hex" id="hex-accent">#0000ff</span></div>
+        <div class="stile-row"><label>Sfondo</label><input type="color" id="color-bg" value="#f5f5ff" oninput="livePreview()"><span class="color-hex" id="hex-bg">#f5f5ff</span></div>
+        <div class="stile-row"><label>Testo</label><input type="color" id="color-ink" value="#0a0a2e" oninput="livePreview()"><span class="color-hex" id="hex-ink">#0a0a2e</span></div>
+        <div class="stile-row"><label>Colore Spes ⭐</label><input type="color" id="color-spes" value="#ffcc00" oninput="livePreview()"><span class="color-hex" id="hex-spes">#ffcc00</span></div>
+        <div class="preview-box">
+          <div class="preview-header"><span>Stalkers di Comunità</span></div>
+          <div class="preview-text">Rete Monelli — Municipio III Roma</div>
+          <div class="preview-muted">87 realtà mappate nel territorio</div>
+          <br><span class="preview-btn">✏ Aggiorna contatto</span>
+        </div>
+      </div>
+      <div class="stile-section">
+        <h3>Font</h3>
+        <div class="font-grid" id="font-grid"></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="stile-apply" onclick="applyStyle()">✓ Applica e salva</button>
+        <button class="stile-reset" onclick="resetStyle()">↩ Ripristina</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="edit-panel">
+  <h3 id="edit-title"></h3>
+  <div class="edit-row">
+    <div class="edit-field" style="min-width:130px;flex:.8">
+      <label>Stato</label>
+      <select id="edit-stato">
+        <option>Da contattare</option><option>Contattato</option>
+        <option>In collaborazione</option><option>Non interessato</option>
+      </select>
+    </div>
+    <div class="edit-field" style="flex:1.5">
+      <label>Referente / Contatto</label>
+      <input type="text" id="edit-contatto" placeholder="Nome, email, telefono…">
+    </div>
+    <div class="edit-field" style="min-width:130px;flex:.7">
+      <label>Data ultimo contatto</label>
+      <input type="date" id="edit-data">
+    </div>
+    <div class="edit-field" style="flex:2">
+      <label>Note</label>
+      <textarea id="edit-note" placeholder="Appunti…"></textarea>
+    </div>
+    <div class="edit-field" style="flex:2">
+      <label>Collabora con</label>
+      <div id="collab-list"></div>
+    </div>
+  </div>
+  <div class="edit-actions">
+    <button class="save-btn" id="save-btn" onclick="saveEdit()">Salva</button>
+    <button class="cancel-btn" onclick="closeEdit()">Chiudi</button>
+    <span id="save-feedback"></span>
+  </div>
+</div>
+
+<!-- SUGGERISCI -->
+<button id="btn-suggerisci" onclick="openSuggerisci()" style="position:fixed;bottom:20px;right:20px;z-index:1500;background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:50px;font-family:var(--font);font-size:.8rem;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,255,.3);letter-spacing:.02em">💡 Suggerisci una realtà</button>
+
+<div id="suggerisci-overlay" onclick="closeSuggerisci()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1600;align-items:center;justify-content:center"></div>
+<div id="suggerisci-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1700;background:#fff;border-radius:14px;padding:28px 28px 22px;width:min(420px,90vw);box-shadow:0 8px 40px rgba(0,0,0,.18);font-family:var(--font)">
+  <h3 style="font-size:1.05rem;font-weight:800;color:var(--ink);margin-bottom:6px">💡 Suggerisci una realtà</h3>
+  <p style="font-size:.78rem;color:var(--muted);margin-bottom:18px;line-height:1.5">Conosci un'associazione, cooperativa o realtà del territorio che non è ancora nella mappa? Segnalacela.</p>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div>
+      <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Nome della realtà *</label>
+      <input id="sug-nome" type="text" placeholder="es. Associazione Il Girasole" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.82rem;color:var(--ink);background:var(--bg);outline:none">
+    </div>
+    <div>
+      <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Informazioni aggiuntive (opzionale)</label>
+      <textarea id="sug-info" placeholder="Indirizzo, sito web, perché potrebbe essere interessante…" rows="3" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.82rem;color:var(--ink);background:var(--bg);outline:none;resize:vertical"></textarea>
+    </div>
+    <div>
+      <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Il tuo nome (opzionale)</label>
+      <input id="sug-chi" type="text" placeholder="Chi suggerisce?" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.82rem;color:var(--ink);background:var(--bg);outline:none">
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:18px;align-items:center">
+    <button onclick="inviaStuggerimento()" id="sug-btn" style="background:var(--accent);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-family:var(--font);font-size:.82rem;font-weight:800;cursor:pointer">Invia</button>
+    <button onclick="closeSuggerisci()" style="background:var(--bg);color:var(--muted);border:1.5px solid var(--border);padding:9px 16px;border-radius:8px;font-family:var(--font);font-size:.82rem;font-weight:600;cursor:pointer">Annulla</button>
+    <span id="sug-feedback" style="font-size:.75rem;color:var(--muted);font-weight:600;margin-left:4px"></span>
+  </div>
+</div>
+function openSuggerisci(){
+  document.getElementById('suggerisci-overlay').style.display='block';
+  document.getElementById('suggerisci-modal').style.display='block';
+  document.getElementById('sug-nome').focus();
+}
+function closeSuggerisci(){
+  document.getElementById('suggerisci-overlay').style.display='none';
+  document.getElementById('suggerisci-modal').style.display='none';
+  document.getElementById('sug-nome').value='';
+  document.getElementById('sug-info').value='';
+  document.getElementById('sug-chi').value='';
+  document.getElementById('sug-feedback').textContent='';
+}
+async function inviaStuggerimento(){
+  const nome=document.getElementById('sug-nome').value.trim();
+  if(!nome){document.getElementById('sug-nome').style.borderColor='#e74c3c';setTimeout(()=>document.getElementById('sug-nome').style.borderColor='',2000);return;}
+  const info=document.getElementById('sug-info').value.trim();
+  const chi=document.getElementById('sug-chi').value.trim();
+  const btn=document.getElementById('sug-btn');
+  btn.disabled=true;btn.textContent='Invio…';
+  document.getElementById('sug-feedback').textContent='';
+  try{
+    await fetch(SCRIPT_URL,{
+      method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({_tipo:'suggerimento',Suggerimento:nome,InfoSuggerimento:info,ChiSuggerisce:chi,DataSuggerimento:new Date().toLocaleDateString('it-IT')})
+    });
+    document.getElementById('sug-feedback').textContent='✓ Grazie!';
+    document.getElementById('sug-feedback').style.color='#2ecc71';
+    setTimeout(closeSuggerisci,1500);
+  }catch(e){
+    document.getElementById('sug-feedback').textContent='Errore, riprova.';
+    document.getElementById('sug-feedback').style.color='#e74c3c';
+  }
+  btn.disabled=false;btn.textContent='Invia';
+}
+
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzdn0USuYLzzX3I4f7Nf3HAfZx2YqzzKfZoaEJwJOSNKu4EBKFnGmYJdKX9iyGKtJcUg/exec';
+const SPES_NAME = 'Spes Contra Spem';
+
+const CAT_COLORS = {
+  'Enti del Terzo Settore':'#3355ff','Parrocchie, Enti religiosi, Scout':'#22aa66',
+  'Scuole, Scuole Migranti, Ripetizioni':'#9944ee','Centri Sociali, Culturali, Biblioteche':'#ee4499',
+  'Disabilità':'#ff8800','Servizi socio-sanitari':'#00aacc',
+  'Ambiente, Sport, Cibo':'#55bb00','Aziende private':'#888','Generale':'#aaa'
+};
+const CAT_LABELS = {
+  'Enti del Terzo Settore':'Terzo Settore','Parrocchie, Enti religiosi, Scout':'Religiosi/Scout',
+  'Scuole, Scuole Migranti, Ripetizioni':'Scuole','Centri Sociali, Culturali, Biblioteche':'Centri Culturali',
+  'Disabilità':'Disabilità','Servizi socio-sanitari':'Socio-sanitari',
+  'Ambiente, Sport, Cibo':'Ambiente/Sport','Aziende private':'Aziende','Generale':'Generale'
+};
+const STATO_CLASS = {
+  'Da contattare':'stato-da','Contattato':'stato-contattato',
+  'In collaborazione':'stato-collabo','Non interessato':'stato-non'
+};
+const FONTS = [
+  {name:'Nunito',google:'Nunito:wght@400;700;800'},
+  {name:'Outfit',google:'Outfit:wght@400;700;800'},
+  {name:'DM Sans',google:'DM+Sans:wght@400;500;700'},
+  {name:'Inter',google:'Inter:wght@400;600;700'},
+  {name:'Poppins',google:'Poppins:wght@400;600;700'},
+  {name:'Figtree',google:'Figtree:wght@400;600;700'},
+  {name:'Syne',google:'Syne:wght@400;700;800'},
+];
+
+let DATA = [];
+let activeCategories = new Set(Object.keys(CAT_COLORS));
+let activeStato='tutti', searchQuery='', selectedIndex=null, editingIndex=null;
+let markers=[], currentPage='mappa', currentFont='Nunito';
+let ragMap=null, ragLayers=[];
+
+function setSyncStatus(state,label){
+  document.getElementById('sync-dot').className=state;
+  document.getElementById('sync-label').textContent=label;
+}
+
+// ===== DASHBOARD =====
+function updateDashboard(){
+  document.getElementById('d-total').textContent = DATA.length;
+  document.getElementById('d-col').textContent   = DATA.filter(d=>d.Stato==='In collaborazione').length;
+  document.getElementById('d-cnt').textContent   = DATA.filter(d=>d.Stato==='Contattato').length;
+  document.getElementById('d-da').textContent    = DATA.filter(d=>d.Stato==='Da contattare').length;
+  document.getElementById('d-non').textContent   = DATA.filter(d=>d.Stato==='Non interessato').length;
+}
+
+function filterDash(stato){
+  activeStato = stato;
+  // Aggiorna highlight dashboard
+  document.querySelectorAll('.dash-card').forEach(c=>c.classList.remove('active-filter'));
+  const map = {'In collaborazione':'.dash-col','Contattato':'.dash-cnt','Da contattare':'.dash-da','Non interessato':'.dash-non'};
+  if(map[stato]) document.querySelector(map[stato]).classList.add('active-filter');
+  // Sincronizza i bottoni stato nella sidebar
+  document.querySelectorAll('.stato-btn').forEach(b=>b.classList.toggle('active', b.dataset.stato===stato));
+  renderList(); renderMarkers();
+}
+
+// ===== LOAD =====
+async function loadFromSheet(){
+  document.getElementById('loading-msg').textContent='Lettura del foglio…';
+  setSyncStatus('saving','Caricamento…');
+  try {
+    const res = await fetch(SCRIPT_URL, {method:'GET'});
+    const json = await res.json();
+    if(json.status==='ok' && Array.isArray(json.data) && json.data.length>0){
+      DATA = json.data.map(r=>({
+        Nome: r['Nome']||'',
+        Categoria: r['Categoria']||'',
+        Stato: r['Stato']||'Da contattare',
+        Contatto: r['Contatto']||'',
+        Note: r['Note']||'',
+        Descrizione: r['Descrizione']||'',
+        Lat: parseFloat((r['Lat']||'0').toString().replace(',','.'))||0,
+        Lng: parseFloat((r['Lng']||'0').toString().replace(',','.'))||0,
+        Collabora: r['Collabora']||'',
+        DataContatto: r['DataContatto']||''
+      })).filter(d=>d.Nome && d.Lat && d.Lng);
+      setSyncStatus('ok','Sincronizzato');
+    } else {
+      throw new Error('Nessun dato');
+    }
+  } catch(e){
+    console.warn('Errore caricamento:', e);
+    DATA = FALLBACK.map(d=>({...d}));
+    setSyncStatus('error','Offline — dati locali');
+  }
+  document.getElementById('loading-overlay').style.display='none';
+  updateDashboard();
+  buildCatFilters(); renderList(); renderMarkers();
+}
+
+// ===== SAVE =====
+async function saveRow(rowData){
+  setSyncStatus('saving','Salvataggio…');
+  try {
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(rowData)});
+    setSyncStatus('ok','Salvato ✓');
+    setTimeout(()=>setSyncStatus('ok','Sincronizzato'),2500);
+  } catch(e){ setSyncStatus('error','Errore salvataggio'); }
+}
+
+// ===== NAV =====
+function showPage(page,btn){
+  currentPage=page;
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  ['mappa','ragnatela','stile'].forEach(p=>{
+    document.getElementById('page-'+p).classList.toggle('active',p===page);
+  });
+  if(page==='ragnatela') setTimeout(initRagnatela,80);
+}
+
+// ===== MAP =====
+const map=L.map('map').setView([41.945,12.55],12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
+
+function isSpes(d){return d.Nome===SPES_NAME}
+
+function makeIcon(color,sel=false,spes=false){
+  if(spes){const s=sel?22:18;return L.divIcon({html:`<div style="width:${s}px;height:${s}px;border-radius:50%;background:#ffcc00;border:3px solid #fff;box-shadow:0 0 0 3px #ffcc00,0 2px 10px rgba(255,204,0,.6);display:flex;align-items:center;justify-content:center;font-size:${Math.round(s*.5)}px">⭐</div>`,className:'',iconSize:[s+6,s+6],iconAnchor:[(s+6)/2,(s+6)/2]});}
+  const s=sel?14:10;
+  return L.divIcon({html:`<div style="width:${s}px;height:${s}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 5px rgba(0,0,0,.3)"></div>`,className:'',iconSize:[s+4,s+4],iconAnchor:[(s+4)/2,(s+4)/2]});
+}
+
+function filteredData(){
+  return DATA.map((d,i)=>({...d,_i:i})).filter(d=>{
+    if(!activeCategories.has(d.Categoria)) return false;
+    if(activeStato!=='tutti'&&d.Stato!==activeStato) return false;
+    if(searchQuery){const q=searchQuery.toLowerCase();if(!d.Nome.toLowerCase().includes(q)&&!d.Descrizione.toLowerCase().includes(q)) return false;}
+    return true;
+  });
+}
+
+let showLabels=false, labelMarkers=[];
+
+function toggleLabels(){
+  showLabels=!showLabels;
+  const btn=document.getElementById('btn-labels');
+  btn.textContent=showLabels?'🏷 Etichette: on':'🏷 Etichette: off';
+  btn.style.cssText=showLabels
+    ?'font-size:.65rem;padding:3px 10px;border-radius:6px;border:1.5px solid var(--accent);background:var(--accent);cursor:pointer;font-family:var(--font);font-weight:700;color:white;transition:all .15s'
+    :'font-size:.65rem;padding:3px 10px;border-radius:6px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted);transition:all .15s';
+  renderMarkers();
+}
+
+const STALE_DAYS = 60;
+function isStale(d){
+  if(!d.DataContatto) return false;
+  if(d.Stato==='Da contattare'||d.Stato==='Non interessato') return false;
+  const days=(Date.now()-new Date(d.DataContatto))/(1000*60*60*24);
+  return days>STALE_DAYS;
+}
+
+let presentationMode=false;
+function togglePresentation(){
+  presentationMode=!presentationMode;
+  document.body.classList.toggle('presenting',presentationMode);
+  document.getElementById('btn-present').textContent=presentationMode?'✕ Esci':'⛶ Presentazione';
+  setTimeout(()=>map.invalidateSize(),300);
+}
+
+function renderList(){
+  const items=filteredData();
+  document.getElementById('list-count').textContent=items.length+' realtà';
+  document.getElementById('list-container').innerHTML=items.map(d=>{
+    const color=CAT_COLORS[d.Categoria]||'#aaa',cls=STATO_CLASS[d.Stato]||'stato-da';
+    const sc=isSpes(d)?'spes-item':'',st=isSpes(d)?'<span class="spes-label">⭐ origine</span>':'';
+    const stale=isStale(d)?'<span class="stale-badge">⏰ ricontattare</span>':'';
+    return `<div class="list-item ${sc} ${selectedIndex===d._i?'selected':''}" data-idx="${d._i}" onclick="selectItem(${d._i})">
+      <div class="item-name">${d.Nome}</div>
+      <div class="item-meta"><div class="cat-dot" style="background:${color}"></div><span class="item-cat">${CAT_LABELS[d.Categoria]||d.Categoria}</span>${st}${stale}<span class="stato-badge ${cls}">${d.Stato}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderMarkers(){
+  markers.forEach(m=>map.removeLayer(m));markers=[];
+  labelMarkers.forEach(m=>map.removeLayer(m));labelMarkers=[];
+  filteredData().forEach(d=>{
+    const color=CAT_COLORS[d.Categoria]||'#aaa';
+    const m=L.marker([d.Lat,d.Lng],{icon:makeIcon(color,selectedIndex===d._i,isSpes(d))}).addTo(map).on('click',()=>selectItem(d._i));
+    m._di=d._i; markers.push(m);
+    if(showLabels){
+      const lm=L.marker([d.Lat,d.Lng],{icon:L.divIcon({
+        html:`<div style="font-family:var(--font);font-size:10px;font-weight:700;color:var(--ink);white-space:nowrap;margin-top:14px;text-shadow:0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff">${d.Nome.length>22?d.Nome.slice(0,20)+'…':d.Nome}</div>`,
+        className:'',iconAnchor:[0,0]
+      }),interactive:false}).addTo(map);
+      labelMarkers.push(lm);
+    }
+  });
+}
+
+function selectItem(idx){
+  selectedIndex=idx;const d=DATA[idx],color=CAT_COLORS[d.Categoria]||'#aaa';
+  document.querySelectorAll('.list-item').forEach(el=>el.classList.remove('selected'));
+  const el=document.querySelector(`[data-idx="${idx}"]`);
+  if(el){el.classList.add('selected');el.scrollIntoView({block:'nearest'});}
+  map.flyTo([d.Lat,d.Lng],15,{duration:.8});
+  markers.forEach(m=>m.setIcon(makeIcon(CAT_COLORS[DATA[m._di]?.Categoria]||'#aaa',m._di===idx,isSpes(DATA[m._di]))));
+  const sp=isSpes(d)?'<div class="popup-spes-tag">⭐ Punto di origine della rete</div>':'';
+  const dsc=d.Descrizione?`<div class="popup-desc">${d.Descrizione}</div>`:'';
+  const cnt=d.Contatto?`<div class="popup-field"><label>Referente</label>${d.Contatto}</div>`:'';
+  const dt=d.DataContatto?`<div class="popup-field"><label>Ultimo contatto</label>${d.DataContatto}</div>`:'';
+  const staleWarn=isStale(d)?`<div style="font-size:.7rem;color:#a05000;background:#fff0e0;border-radius:5px;padding:4px 8px;margin-bottom:8px">⏰ Non contattato da più di ${STALE_DAYS} giorni</div>`:'';
+  const nt=d.Note?`<div class="popup-field"><label>Note</label>${d.Note}</div>`:'';
+  const col=d.Collabora?`<div class="popup-field"><label>Collabora con</label>${d.Collabora}</div>`:'';
+  L.popup({maxWidth:310}).setLatLng([d.Lat,d.Lng]).setContent(`<div class="popup-wrap">
+    <div class="popup-nome">${d.Nome}</div>${sp}
+    <div class="popup-cat"><span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span> ${CAT_LABELS[d.Categoria]||d.Categoria}</div>
+    <span class="stato-badge ${STATO_CLASS[d.Stato]||'stato-da'}">${d.Stato}</span>
+    ${staleWarn}${dsc}${cnt}${dt}${nt}${col}
+    <div class="popup-actions"><button class="popup-btn" onclick="openEdit(${idx})">✏ Modifica</button></div>
+  </div>`).openOn(map);
+}
+
+// ===== EDIT =====
+function openEdit(idx){
+  editingIndex=idx;const d=DATA[idx];
+  document.getElementById('edit-title').textContent=d.Nome;
+  document.getElementById('edit-stato').value=d.Stato;
+  document.getElementById('edit-contatto').value=d.Contatto||'';
+  document.getElementById('edit-data').value=d.DataContatto||'';
+  document.getElementById('edit-note').value=d.Note||'';
+  document.getElementById('save-feedback').textContent='';
+  const cur=(d.Collabora||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const list=document.getElementById('collab-list');list.innerHTML='';
+  DATA.filter(x=>x.Nome!==d.Nome).forEach(x=>{
+    const lbl=document.createElement('label');lbl.className='collab-check';
+    lbl.innerHTML=`<input type="checkbox" value="${x.Nome}" ${cur.includes(x.Nome)?'checked':''}><span style="width:7px;height:7px;border-radius:50%;background:${CAT_COLORS[x.Categoria]||'#aaa'};display:inline-block;flex-shrink:0"></span>${x.Nome}`;
+    list.appendChild(lbl);
+  });
+  document.getElementById('edit-panel').classList.add('open');
+}
+function closeEdit(){document.getElementById('edit-panel').classList.remove('open');editingIndex=null;}
+
+async function saveEdit(){
+  if(editingIndex===null) return;
+  const d=DATA[editingIndex];
+  d.Stato=document.getElementById('edit-stato').value;
+  d.Contatto=document.getElementById('edit-contatto').value;
+  d.DataContatto=document.getElementById('edit-data').value;
+  d.Note=document.getElementById('edit-note').value;
+  d.Collabora=[...document.getElementById('collab-list').querySelectorAll('input:checked')].map(c=>c.value).join(', ');
+  const btn=document.getElementById('save-btn');
+  btn.disabled=true;document.getElementById('save-feedback').textContent='Salvataggio…';
+  await saveRow(d);
+  btn.disabled=false;document.getElementById('save-feedback').textContent='✓ Salvato';
+  setTimeout(()=>document.getElementById('save-feedback').textContent='',2000);
+  const si=editingIndex;closeEdit();map.closePopup();
+  updateDashboard();renderList();renderMarkers();selectItem(si);
+  if(currentPage==='ragnatela') drawRagnatela();
+}
+
+// ===== CAT FILTERS =====
+function buildCatFilters(){
+  const container=document.getElementById('cat-filters');container.innerHTML='';
+  const cats=[...new Set(DATA.map(d=>d.Categoria))];
+  const allBtn=document.createElement('button');allBtn.className='filter-btn';allBtn.textContent='Tutti';
+  allBtn.style.cssText='background:var(--accent);color:white;border-color:var(--accent)';
+  allBtn.onclick=()=>{
+    if(activeCategories.size===cats.length){activeCategories.clear();allBtn.style.cssText='background:white;color:var(--muted)';document.querySelectorAll('.filter-btn[data-cat]').forEach(b=>{b.style.background='white';b.style.color=CAT_COLORS[b.dataset.cat]||'#aaa';});}
+    else{activeCategories=new Set(cats);allBtn.style.cssText='background:var(--accent);color:white;border-color:var(--accent)';document.querySelectorAll('.filter-btn[data-cat]').forEach(b=>{const c=CAT_COLORS[b.dataset.cat]||'#aaa';b.style.background=c;b.style.color='white';});}
+    renderList();renderMarkers();
+  };
+  container.appendChild(allBtn);
+  cats.forEach(cat=>{
+    const btn=document.createElement('button');btn.className='filter-btn';btn.textContent=CAT_LABELS[cat]||cat;btn.dataset.cat=cat;
+    const color=CAT_COLORS[cat]||'#aaa';btn.style.cssText=`background:${color};color:white;border-color:${color}`;
+    btn.onclick=()=>{if(activeCategories.has(cat)){activeCategories.delete(cat);btn.style.background='white';btn.style.color=color;}else{activeCategories.add(cat);btn.style.background=color;btn.style.color='white';}renderList();renderMarkers();};
+    container.appendChild(btn);
+  });
+}
+
+document.querySelectorAll('.stato-btn').forEach(btn=>btn.onclick=()=>{
+  activeStato=btn.dataset.stato;
+  document.querySelectorAll('.stato-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Sincronizza highlight dashboard
+  document.querySelectorAll('.dash-card').forEach(c=>c.classList.remove('active-filter'));
+  const map2={'In collaborazione':'.dash-col','Contattato':'.dash-cnt','Da contattare':'.dash-da','Non interessato':'.dash-non'};
+  if(map2[activeStato]) document.querySelector(map2[activeStato]).classList.add('active-filter');
+  renderList();renderMarkers();
+});
+document.getElementById('search-input').addEventListener('input',e=>{searchQuery=e.target.value;renderList();renderMarkers();});
+
+document.getElementById('map').insertAdjacentHTML('beforeend',`<div id="legend"><h4>Categorie</h4>${Object.entries(CAT_LABELS).map(([k,v])=>`<div class="leg-row"><div class="leg-dot" style="background:${CAT_COLORS[k]}"></div><span>${v}</span></div>`).join('')}<div class="leg-row" style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px"><div class="leg-dot" style="background:#ffcc00"></div><span style="font-weight:700">Spes</span></div></div>`);
+
+// ===== RAGNATELA =====
+function initRagnatela(){
+  if(!ragMap){
+    ragMap=L.map('ragnatela-map',{zoomControl:true,attributionControl:false}).setView(map.getCenter(),map.getZoom());
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,opacity:0.7}).addTo(ragMap);
+  } else {
+    ragMap.setView(map.getCenter(),map.getZoom());
+  }
+  // Popola il select con tutte le realtà che hanno almeno una connessione
+  const sel=document.getElementById('rag-focus');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— tutte —</option>';
+  DATA.forEach(d=>{
+    const opt=document.createElement('option');
+    opt.value=d.Nome; opt.textContent=d.Nome;
+    if(d.Nome===cur) opt.selected=true;
+    sel.appendChild(opt);
+  });
+  drawRagnatela();
+}
+
+function updateRagStyle(){
+  const wS=document.getElementById('rag-w-spes').value;
+  const oS=document.getElementById('rag-o-spes').value;
+  const wP=document.getElementById('rag-w-peer').value;
+  const oP=document.getElementById('rag-o-peer').value;
+  document.getElementById('lbl-w-spes').textContent=wS+'px';
+  document.getElementById('lbl-o-spes').textContent=oS+'%';
+  document.getElementById('lbl-w-peer').textContent=wP+'px';
+  document.getElementById('lbl-o-peer').textContent=oP+'%';
+  drawRagnatela();
+}
+
+function getRagStyle(){
+  return {
+    wS: parseFloat(document.getElementById('rag-w-spes')?.value||1.5),
+    oS: parseFloat(document.getElementById('rag-o-spes')?.value||45)/100,
+    wP: parseFloat(document.getElementById('rag-w-peer')?.value||0.8),
+    oP: parseFloat(document.getElementById('rag-o-peer')?.value||15)/100,
+    cS: document.getElementById('rag-c-spes')?.value||'#ffcc00',
+    cP: document.getElementById('rag-c-peer')?.value||'#ffffff',
+  };
+}
+
+function drawRagnatela(){
+  if(!ragMap) return;
+  ragLayers.forEach(l=>ragMap.removeLayer(l));ragLayers=[];
+  const focusName=document.getElementById('rag-focus')?.value||'';
+  const edges=new Map();
+  DATA.forEach(d=>{
+    if(d.Stato==='In collaborazione'&&!isSpes(d)){
+      const spes=DATA.find(x=>isSpes(x));
+      if(spes){const key=[d.Nome,SPES_NAME].sort().join('|||');if(!edges.has(key))edges.set(key,{dA:d,dB:spes,type:'spes'});}
+    }
+    (d.Collabora||'').split(',').map(s=>s.trim()).filter(Boolean).forEach(name=>{
+      const dB=DATA.find(x=>x.Nome===name);if(!dB)return;
+      const key=[d.Nome,name].sort().join('|||');
+      if(!edges.has(key)) edges.set(key,{dA:d,dB,type:d.Nome===SPES_NAME||name===SPES_NAME?'spes':'peer'});
+    });
+  });
+  const involved=new Set();let connCount=0;
+  edges.forEach(({dA,dB,type})=>{
+    if(focusName && dA.Nome!==focusName && dB.Nome!==focusName) return;
+    const isSC=type==='spes';
+    const line=L.polyline([[dA.Lat,dA.Lng],[dB.Lat,dB.Lng]],{color:isSC?getRagStyle().cS:getRagStyle().cP,opacity:isSC?getRagStyle().oS:getRagStyle().oP,weight:isSC?getRagStyle().wS:getRagStyle().wP,dashArray:isSC?null:'3 5'}).addTo(ragMap);
+    ragLayers.push(line);involved.add(dA.Nome);involved.add(dB.Nome);connCount++;
+  });
+  DATA.forEach(d=>{
+    const isInv=involved.has(d.Nome);
+    const color=isSpes(d)?'#ffcc00':(CAT_COLORS[d.Categoria]||'#6666ff');
+    const r=isSpes(d)?12:(isInv?7:3);
+    const op=isInv?1:.15;
+    const m=L.circleMarker([d.Lat,d.Lng],{radius:r,fillColor:color,color:'rgba(0,0,0,.3)',weight:1.5,fillOpacity:op}).addTo(ragMap);
+    if(isInv) m.bindTooltip(`<strong>${d.Nome}</strong><br><span style="font-size:.72rem;opacity:.7">${CAT_LABELS[d.Categoria]||d.Categoria}</span>`,{direction:'top',className:'rag-tooltip'});
+    ragLayers.push(m);
+  });
+  const suffix=focusName?` per "${focusName.length>20?focusName.slice(0,18)+'…':focusName}"` : '';
+  document.getElementById('ragnatela-count').textContent=connCount+(connCount===1?' connessione attiva':' connessioni attive')+suffix;
+}
+
+// ===== STILE =====
+function livePreview(){
+  ['accent','bg','ink','spes'].forEach(k=>document.getElementById('hex-'+k).textContent=document.getElementById('color-'+k).value);
+  applyTheme(document.getElementById('color-accent').value,document.getElementById('color-bg').value,document.getElementById('color-ink').value,document.getElementById('color-spes').value,currentFont);
+}
+function applyTheme(accent,bg,ink,spes,font){
+  const r=document.documentElement.style;
+  r.setProperty('--accent',accent);r.setProperty('--bg',bg);r.setProperty('--ink',ink);r.setProperty('--spes',spes);
+  r.setProperty('--accent-light',lighten(accent,90));r.setProperty('--accent-mid',lighten(accent,50));
+  r.setProperty('--font',`'${font}',sans-serif`);
+  document.body.style.fontFamily=`'${font}',sans-serif`;
+}
+function lighten(hex,pct){
+  const n=parseInt(hex.slice(1),16),r=n>>16,g=(n>>8&0xff),b=(n&0xff);
+  const m=c=>Math.round(c+(255-c)*pct/100);
+  return '#'+[m(r),m(g),m(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+function applyStyle(){
+  applyTheme(document.getElementById('color-accent').value,document.getElementById('color-bg').value,document.getElementById('color-ink').value,document.getElementById('color-spes').value,currentFont);
+  try{localStorage.setItem('sdc_style',JSON.stringify({accent:document.getElementById('color-accent').value,bg:document.getElementById('color-bg').value,ink:document.getElementById('color-ink').value,spes:document.getElementById('color-spes').value,font:currentFont}));}catch(e){}
+}
+function resetStyle(){
+  const d={accent:'#0000ff',bg:'#f5f5ff',ink:'#0a0a2e',spes:'#ffcc00',font:'Nunito'};
+  document.getElementById('color-accent').value=d.accent;document.getElementById('color-bg').value=d.bg;
+  document.getElementById('color-ink').value=d.ink;document.getElementById('color-spes').value=d.spes;
+  currentFont=d.font;document.querySelectorAll('.font-card').forEach(c=>c.classList.toggle('selected',c.dataset.font===d.font));
+  applyTheme(d.accent,d.bg,d.ink,d.spes,d.font);try{localStorage.removeItem('sdc_style');}catch(e){}livePreview();
+}
+function loadSavedStyle(){
+  try{
+    const s=JSON.parse(localStorage.getItem('sdc_style')||'null');if(!s)return;
+    document.getElementById('color-accent').value=s.accent||'#0000ff';
+    document.getElementById('color-bg').value=s.bg||'#f5f5ff';
+    document.getElementById('color-ink').value=s.ink||'#0a0a2e';
+    document.getElementById('color-spes').value=s.spes||'#ffcc00';
+    currentFont=s.font||'Nunito';applyTheme(s.accent,s.bg,s.ink,s.spes,currentFont);livePreview();
+  }catch(e){}
+}
+function buildFontGrid(){
+  const grid=document.getElementById('font-grid');
+  FONTS.forEach(f=>{
+    const link=document.createElement('link');link.rel='stylesheet';link.href=`https://fonts.googleapis.com/css2?family=${f.google}&display=swap`;document.head.appendChild(link);
+    const card=document.createElement('div');card.className='font-card'+(f.name===currentFont?' selected':'');card.dataset.font=f.name;
+    card.innerHTML=`<div class="font-name">${f.name}</div><div class="font-sample" style="font-family:'${f.name}',sans-serif">Aa — Rete Monelli</div>`;
+    card.onclick=()=>{currentFont=f.name;document.querySelectorAll('.font-card').forEach(c=>c.classList.remove('selected'));card.classList.add('selected');livePreview();};
+    grid.appendChild(card);
+  });
+}
+
+// ===== SUGGERIMENTI =====
+function openSuggest(){
+  document.getElementById('suggest-modal').style.display='flex';
+  document.getElementById('sug-nome').value='';
+  document.getElementById('sug-note').value='';
+  document.getElementById('sug-feedback').textContent='';
+  document.getElementById('sug-btn').disabled=false;
+  setTimeout(()=>document.getElementById('sug-nome').focus(),100);
+}
+function closeSuggest(){
+  document.getElementById('suggest-modal').style.display='none';
+}
+async function submitSuggest(){
+  const nome=document.getElementById('sug-nome').value.trim();
+  if(!nome){
+    document.getElementById('sug-feedback').textContent='⚠ Inserisci almeno il nome.';
+    document.getElementById('sug-feedback').style.color='#e74c3c';
+    return;
+  }
+  const note=document.getElementById('sug-note').value.trim();
+  const testo=note?`${nome} (${note})`:nome;
+  document.getElementById('sug-btn').disabled=true;
+  document.getElementById('sug-feedback').textContent='Invio in corso…';
+  document.getElementById('sug-feedback').style.color='var(--muted)';
+  try{
+    await fetch(SCRIPT_URL,{
+      method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({_tipo:'suggerimento',Suggerimenti:testo})
+    });
+    document.getElementById('sug-feedback').textContent='✓ Grazie! Il suggerimento è stato inviato.';
+    document.getElementById('sug-feedback').style.color='#2ecc71';
+    setTimeout(closeSuggest,2000);
+  }catch(e){
+    document.getElementById('sug-feedback').textContent='Errore di rete, riprova.';
+    document.getElementById('sug-feedback').style.color='#e74c3c';
+    document.getElementById('sug-btn').disabled=false;
+  }
+}
+document.getElementById('suggest-modal').addEventListener('click',function(e){if(e.target===this)closeSuggest();});
+
+const FALLBACK = [{"Nome":"Collina del Barbagianni (rete Mondo Comunità e Famiglia)","Categoria":"Enti del Terzo Settore","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"Progetti di accoglienza, Agricoltura sociale","Lat":41.9622994,"Lng":12.5562418,"Collabora":""},{"Nome":"Centro Casa Giocosa","Categoria":"Enti del Terzo Settore","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"","Lat":41.9300579,"Lng":12.5371344,"Collabora":""},{"Nome":"Sant'egidio Serpentara-Vigne Nuove","Categoria":"Enti del Terzo Settore","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"","Lat":41.963033731903,"Lng":12.5157021355822,"Collabora":""},{"Nome":"Parsec Coop Sociale Arl","Categoria":"Enti del Terzo Settore","Stato":"Da contattare","Contatto":"","Note":"","Descrizione":"Prevenzione del danno uso sostanze, lotta alla tratta, benessere per giovani, sostegno studio, sportello di ascolto.","Lat":41.9454804,"Lng":12.5301449,"Collabora":""},{"Nome":"Spes Contra Spem","Categoria":"Enti del Terzo Settore","Stato":"Da contattare","Contatto":"","Note":"","Descrizione":"La cooperativa da cui parte tutto.","Lat":41.9601,"Lng":12.5512271,"Collabora":""},{"Nome":"Eureka I coop","Categoria":"Enti del Terzo Settore","Stato":"Da contattare","Contatto":"","Note":"","Descrizione":"","Lat":41.9647676,"Lng":12.5138049,"Collabora":""},{"Nome":"SPINOFF Roma ETS","Categoria":"Enti del Terzo Settore","Stato":"Contattato","Contatto":"valerio: +39 338 795 0919","Note":"","Descrizione":"Laboratori, rassegne cinematografiche, attività educative.","Lat":41.9449213,"Lng":12.531119,"Collabora":""},{"Nome":"Gruppo CIAO - San Ponziano","Categoria":"Parrocchie, Enti religiosi, Scout","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"","Lat":41.947469,"Lng":12.5452074,"Collabora":""},{"Nome":"Club Nomentano","Categoria":"Ambiente, Sport, Cibo","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"","Lat":41.9376993,"Lng":12.5546833,"Collabora":""},{"Nome":"Centro Anziani Salaria","Categoria":"Centri Sociali, Culturali, Biblioteche","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"","Lat":41.98414,"Lng":12.50805,"Collabora":""},{"Nome":"Anticorpi","Categoria":"Centri Sociali, Culturali, Biblioteche","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"Lavorano con arte e disabilità","Lat":41.9818459,"Lng":12.5101585,"Collabora":""}];
+
+buildFontGrid();
+loadSavedStyle();
+loadFromSheet();
+</script>
+<!-- SUGGEST MODAL -->
+<div id="suggest-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(10,10,46,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px;max-width:400px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.2);font-family:var(--font)">
+    <h3 style="font-size:1rem;font-weight:800;color:var(--ink);margin-bottom:6px">+ Suggerisci una realtà</h3>
+    <p style="font-size:.77rem;color:var(--muted);margin-bottom:18px;line-height:1.5">Conosci un'associazione, cooperativa o realtà del Municipio III che non è ancora in mappa? Segnalacela.</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:3px">Nome della realtà *</label>
+        <input id="sug-nome" type="text" placeholder="es. Associazione XYZ" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.82rem;color:var(--ink);outline:none">
+      </div>
+      <div>
+        <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:3px">Note opzionali</label>
+        <input id="sug-note" type="text" placeholder="es. zona, sito web, perché la suggerisci…" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.82rem;color:var(--ink);outline:none">
+      </div>
+    </div>
+    <div id="sug-feedback" style="font-size:.74rem;margin-top:10px;min-height:18px;font-weight:600"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="submitSuggest()" id="sug-btn" style="flex:1;background:var(--accent);color:#fff;border:none;padding:9px;border-radius:8px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">Invia</button>
+      <button onclick="closeSuggest()" style="background:var(--bg);color:var(--muted);border:1.5px solid var(--border);padding:9px 16px;border-radius:8px;font-family:var(--font);font-size:.82rem;font-weight:600;cursor:pointer">Annulla</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
