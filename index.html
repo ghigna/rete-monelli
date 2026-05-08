@@ -29,54 +29,53 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .nav-tab { padding: 0 20px; display: flex; align-items: center; gap: 7px; font-size: .78rem; font-weight: 700; color: rgba(255,255,255,.5); cursor: pointer; border: none; background: none; text-transform: uppercase; border-bottom: 3px solid transparent; transition: all .18s; }
 .nav-tab.active { color: #fff; border-bottom-color: var(--spes); }
 
-/* --- DASHBOARD --- */
-#dashboard { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--panel); overflow-x: auto; }
-.dash-card { flex: 1; min-width: 120px; padding: 11px 16px; border-right: 1px solid var(--border); cursor: pointer; position: relative; }
-.dash-card:hover { background: var(--bg); }
-.dash-card.active-filter { background: var(--accent-light); }
-.dash-num { font-size: 1.5rem; font-weight: 800; line-height: 1; }
-.dash-label { font-size: .62rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
-.dash-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
-
-/* --- LAYOUT AREA --- */
+/* --- PAGES --- */
 #page-mappa, #page-ragnatela, #page-stile { display: none; flex: 1; overflow: hidden; }
 #page-mappa.active { display: flex; flex-direction: column; }
 #page-ragnatela.active { display: flex; position: relative; }
-#page-stile.active { display: block; overflow-y: auto; padding: 32px; }
+#page-stile.active { display: block; overflow-y: auto; padding: 32px; background: var(--bg); }
 
+/* --- MAPPA --- */
 #map-area { display: flex; flex: 1; overflow: hidden; position: relative; }
 #sidebar { width: var(--sidebar-w); flex-shrink: 0; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--border); }
 #map { flex: 1; z-index: var(--z-map); }
 
-/* --- PANNELLO MODIFICA (FIX RESPONSIVE) --- */
+/* --- RAGNATELA --- */
+#ragnatela-map { width: 100%; height: 100%; background: #0a0a2e; }
+#ragnatela-info { position: absolute; top: 20px; left: 20px; z-index: 500; background: rgba(0,0,30,0.85); padding: 15px; border-radius: 12px; color: #fff; border: 1px solid var(--accent-mid); backdrop-filter: blur(8px); max-width: 250px; }
+
+/* --- STILE --- */
+.stile-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; max-width: 800px; }
+.stile-row { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; }
+.font-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 15px; }
+.font-card { border: 2px solid var(--border); padding: 10px; border-radius: 8px; cursor: pointer; text-align: center; }
+.font-card.selected { border-color: var(--accent); background: var(--accent-light); }
+
+/* --- UI COMPONENTS --- */
+.dash-card { flex: 1; min-width: 110px; padding: 10px 15px; border-right: 1px solid var(--border); cursor: pointer; position: relative; background: #fff; }
+.dash-card.active-filter { background: var(--accent-light); }
+.dash-num { font-size: 1.3rem; font-weight: 800; }
+.dash-label { font-size: .6rem; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+
 #edit-panel { 
   position: fixed; bottom: 0; left: var(--sidebar-w); right: 0; 
   background: #fff; border-top: 3px solid var(--accent); padding: 16px; 
-  transform: translateY(100%); transition: transform .3s cubic-bezier(0.4, 0, 0.2, 1); 
-  z-index: var(--z-ui); box-shadow: 0 -4px 20px rgba(0,0,0,0.15); 
+  transform: translateY(100%); transition: transform .3s; z-index: var(--z-ui); box-shadow: 0 -5px 25px rgba(0,0,0,0.1); 
 }
 #edit-panel.open { transform: translateY(0); }
-@media (max-width: 768px) {
-  #sidebar { display: none; }
-  #edit-panel { left: 0; }
-}
 
-/* --- ELEMENTI UI --- */
-.list-item { padding: 10px 15px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; }
-.list-item.selected { background: var(--accent-light); border-left: 4px solid var(--accent); }
-.stato-badge { font-size: .6rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
-
-/* --- LOADING --- */
-#loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: var(--z-loading); }
-.spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+#loading-overlay { position: fixed; inset: 0; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: var(--z-loading); }
+.spinner { width: 40px; height: 40px; border: 4px solid #eee; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) { #sidebar { display: none; } #edit-panel { left: 0; } }
 </style>
 </head>
 <body>
 
 <div id="loading-overlay">
   <div class="spinner"></div>
-  <p id="loading-msg" style="margin-top:15px; font-weight:700;">Inizializzazione Rete...</p>
+  <p style="margin-top:15px; font-weight:700;">Caricamento dati...</p>
 </div>
 
 <div id="app">
@@ -92,28 +91,15 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
   </div>
 
   <div id="page-mappa" class="active">
-    <div id="dashboard">
-      <div class="dash-card dash-total active-filter" data-stato="tutti">
-        <div class="dash-num" id="d-total">0</div>
-        <div class="dash-label">Totale</div>
-        <div class="dash-bar" style="background:var(--accent)"></div>
-      </div>
-      <div class="dash-card" data-stato="In collaborazione">
-        <div class="dash-num" id="d-col">0</div>
-        <div class="dash-label">In collab.</div>
-        <div class="dash-bar" style="background:#2ecc71"></div>
-      </div>
-      <div class="dash-card" data-stato="Contattato">
-        <div class="dash-num" id="d-cnt">0</div>
-        <div class="dash-label">Contattati</div>
-        <div class="dash-bar" style="background:#4a9eff"></div>
-      </div>
+    <div id="dashboard" style="display:flex; border-bottom: 1px solid var(--border);">
+      <div class="dash-card active-filter" data-stato="tutti"><div class="dash-num" id="d-total">0</div><div class="dash-label">Totale</div></div>
+      <div class="dash-card" data-stato="In collaborazione"><div class="dash-num" id="d-col">0</div><div class="dash-label">Collaborano</div></div>
+      <div class="dash-card" data-stato="Contattato"><div class="dash-num" id="d-cnt">0</div><div class="dash-label">Contattati</div></div>
     </div>
-
     <div id="map-area">
       <div id="sidebar">
-        <div style="padding:15px; background:var(--bg);">
-          <input type="text" id="search-input" placeholder="Cerca realtà..." style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border);">
+        <div style="padding:15px; background:var(--bg); border-bottom: 1px solid var(--border);">
+          <input type="text" id="search-input" placeholder="Cerca realtà..." style="width:100%; padding:10px; border-radius:8px; border:1.5px solid var(--border); outline:none;">
         </div>
         <div id="list-container" style="flex:1; overflow-y:auto;"></div>
       </div>
@@ -121,59 +107,71 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
     </div>
   </div>
 
-  <div id="edit-panel">
-    <h3 id="edit-title" style="margin-bottom:12px; font-size:1rem;">Modifica Realtà</h3>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
-      <div class="edit-field">
-        <label style="font-size:10px; font-weight:800; text-transform:uppercase;">Stato</label>
-        <select id="edit-stato" style="width:100%; padding:8px;">
-            <option>Da contattare</option>
-            <option>Contattato</option>
-            <option>In collaborazione</option>
-            <option>Non interessato</option>
-        </select>
-      </div>
-      <div class="edit-field">
-        <label style="font-size:10px; font-weight:800; text-transform:uppercase;">Referente</label>
-        <input type="text" id="edit-contatto" style="width:100%; padding:8px;">
-      </div>
-      <div class="edit-field" style="grid-column: span 2;">
-        <label style="font-size:10px; font-weight:800; text-transform:uppercase;">Note</label>
-        <textarea id="edit-note" style="width:100%; padding:8px; height:60px;"></textarea>
-      </div>
+  <div id="page-ragnatela">
+    <div id="ragnatela-info">
+      <h3 style="font-size:0.9rem; margin-bottom:5px;">🕸 Connessioni Rete</h3>
+      <p style="font-size:0.75rem; opacity:0.8; line-height:1.4;">Visualizzazione dei legami attivi tra Spes e le realtà del territorio.</p>
+      <div id="rag-stat" style="margin-top:10px; font-weight:800; color:var(--spes); font-size:0.8rem;"></div>
     </div>
-    <div style="margin-top:15px; display:flex; gap:10px;">
-      <button onclick="App.saveEdit()" id="save-btn" style="background:var(--accent); color:#fff; border:none; padding:8px 20px; border-radius:4px; font-weight:700; cursor:pointer;">Salva Modifiche</button>
-      <button onclick="App.closeEdit()" style="background:#eee; border:none; padding:8px 20px; border-radius:4px; cursor:pointer;">Annulla</button>
-      <span id="save-feedback" style="font-size:.8rem; align-self:center;"></span>
+    <div id="ragnatela-map"></div>
+  </div>
+
+  <div id="page-stile">
+    <div class="stile-card">
+      <h3 style="margin-bottom:15px;">🎨 Personalizzazione</h3>
+      <div class="stile-row">
+        <label style="min-width:150px; font-weight:700;">Colore Accento</label>
+        <input type="color" id="style-accent" value="#0000ff" oninput="App.updateTheme()">
+      </div>
+      <div class="stile-row">
+        <label style="min-width:150px; font-weight:700;">Colore Sfondo</label>
+        <input type="color" id="style-bg" value="#f5f5ff" oninput="App.updateTheme()">
+      </div>
+      <div class="stile-row">
+        <label style="min-width:150px; font-weight:700;">Carattere (Font)</label>
+      </div>
+      <div class="font-grid" id="font-grid"></div>
+      <button onclick="App.saveTheme()" style="margin-top:20px; background:var(--accent); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:800; cursor:pointer;">Applica e Salva</button>
     </div>
   </div>
 
-  <div id="page-ragnatela">
-      <div id="ragnatela-map" style="width:100%; height:100%; background:#000;"></div>
+  <div id="edit-panel">
+    <h3 id="edit-title">Modifica Realtà</h3>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px; margin-top:10px;">
+      <div>
+        <label style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--muted);">Stato</label>
+        <select id="edit-stato" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border);">
+            <option>Da contattare</option><option>Contattato</option><option>In collaborazione</option><option>Non interessato</option>
+        </select>
+      </div>
+      <div style="grid-column: span 2;">
+        <label style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--muted);">Collabora con (nomi separati da virgola)</label>
+        <input type="text" id="edit-collab" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border);">
+      </div>
+      <div style="grid-column: span 3;">
+        <label style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--muted);">Note Interne</label>
+        <textarea id="edit-note" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); height:60px;"></textarea>
+      </div>
+    </div>
+    <div style="margin-top:15px; display:flex; gap:10px;">
+      <button onclick="App.saveEdit()" id="save-btn" style="background:var(--accent); color:#fff; border:none; padding:10px 25px; border-radius:6px; font-weight:700; cursor:pointer;">Salva</button>
+      <button onclick="App.closeEdit()" style="background:#eee; border:none; padding:10px 25px; border-radius:6px; cursor:pointer;">Chiudi</button>
+      <span id="save-feedback" style="align-self:center; font-weight:700;"></span>
+    </div>
   </div>
 </div>
 
 <script>
-/**
- * APP MODULE - Stalkers di Comunità
- */
 const App = {
-    // Configurazione
     SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyzdn0USuYLzzX3I4f7Nf3HAfZx2YqzzKfZoaEJwJOSNKu4EBKFnGmYJdKX9iyGKtJcUg/exec',
-    SPES_ID: 'Spes Contra Spem',
-    
-    // Stato
-    data: [],
-    markers: [],
-    markerLayer: null,
-    map: null,
-    activeStato: 'tutti',
-    searchQuery: '',
-    editingIndex: null,
+    SPES_NAME: 'Spes Contra Spem',
+    data: [], markers: [], markerLayer: null, map: null, ragMap: null, ragLayer: null,
+    activeStato: 'tutti', searchQuery: '', editingIndex: null,
+    fonts: ['Nunito', 'Outfit', 'Inter', 'Poppins', 'Figtree'],
 
     init() {
         this.initMap();
+        this.initStyle();
         this.bindEvents();
         this.loadData();
     },
@@ -184,13 +182,33 @@ const App = {
         this.markerLayer = L.layerGroup().addTo(this.map);
     },
 
+    initRagnatela() {
+        if (this.ragMap) return;
+        this.ragMap = L.map('ragnatela-map', { attributionControl: false }).setView([41.945, 12.55], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(this.ragMap);
+        this.ragLayer = L.layerGroup().addTo(this.ragMap);
+    },
+
+    initStyle() {
+        const grid = document.getElementById('font-grid');
+        this.fonts.forEach(f => {
+            const card = document.createElement('div');
+            card.className = `font-card ${f === 'Nunito' ? 'selected' : ''}`;
+            card.style.fontFamily = f;
+            card.innerHTML = `${f}<br><small>Esempio Testo</small>`;
+            card.onclick = () => {
+                document.querySelectorAll('.font-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                document.documentElement.style.setProperty('--font', f);
+            };
+            grid.appendChild(card);
+        });
+    },
+
     bindEvents() {
-        // Navigazione
         document.querySelectorAll('.nav-tab').forEach(btn => {
             btn.onclick = () => this.showPage(btn.dataset.page, btn);
         });
-
-        // Dashboard filtri
         document.querySelectorAll('.dash-card').forEach(card => {
             card.onclick = () => {
                 document.querySelectorAll('.dash-card').forEach(c => c.classList.remove('active-filter'));
@@ -199,8 +217,6 @@ const App = {
                 this.render();
             };
         });
-
-        // Ricerca
         document.getElementById('search-input').oninput = (e) => {
             this.searchQuery = e.target.value.toLowerCase();
             this.render();
@@ -215,47 +231,39 @@ const App = {
             if(result.status === 'ok') {
                 this.data = result.data.filter(d => d.Lat && d.Lng);
                 this.setSync('ok', 'Sincronizzato');
+                this.updateStats();
+                this.render();
             }
         } catch (e) {
-            console.error("Errore fetch, uso fallback", e);
-            this.setSync('error', 'Offline');
-            // Fallback locale se necessario
+            this.setSync('error', 'Errore connessione');
         }
         document.getElementById('loading-overlay').style.display = 'none';
-        this.updateStats();
-        this.render();
     },
 
     render() {
-        // Pulisci i marker esistenti in un colpo solo
         this.markerLayer.clearLayers();
         const container = document.getElementById('list-container');
         container.innerHTML = '';
-
+        
         const filtered = this.data.filter(d => {
-            const matchesStato = this.activeStato === 'tutti' || d.Stato === this.activeStato;
-            const matchesSearch = d.Nome.toLowerCase().includes(this.searchQuery);
-            return matchesStato && matchesSearch;
+            return (this.activeStato === 'tutti' || d.Stato === this.activeStato) && 
+                   (d.Nome.toLowerCase().includes(this.searchQuery));
         });
 
-        filtered.forEach((d, idx) => {
-            // Marker
-            const isSpes = d.Nome === this.SPES_ID;
+        filtered.forEach(d => {
             const marker = L.circleMarker([d.Lat, d.Lng], {
-                radius: isSpes ? 10 : 6,
-                fillColor: isSpes ? '#ffcc00' : '#0000ff',
-                color: '#fff',
-                weight: 2,
-                fillOpacity: 0.8
-            });
-            
-            marker.on('click', () => this.openEdit(this.data.indexOf(d)));
+                radius: d.Nome === this.SPES_NAME ? 10 : 7,
+                fillColor: d.Nome === this.SPES_NAME ? '#ffcc00' : '#0000ff',
+                color: '#fff', weight: 2, fillOpacity: 0.9
+            }).on('click', () => this.openEdit(this.data.indexOf(d)));
             this.markerLayer.addLayer(marker);
 
-            // Lista
             const item = document.createElement('div');
             item.className = 'list-item';
-            item.innerHTML = `<strong>${d.Nome}</strong><br><span class="stato-badge">${d.Stato}</span>`;
+            item.style.padding = '12px 15px';
+            item.style.borderBottom = '1px solid var(--border)';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `<div style="font-weight:700; font-size:0.85rem;">${d.Nome}</div><div style="font-size:0.7rem; color:var(--muted);">${d.Stato}</div>`;
             item.onclick = () => {
                 this.map.flyTo([d.Lat, d.Lng], 15);
                 this.openEdit(this.data.indexOf(d));
@@ -264,63 +272,87 @@ const App = {
         });
     },
 
+    drawRagnatela() {
+        this.ragLayer.clearLayers();
+        const spes = this.data.find(d => d.Nome === this.SPES_NAME);
+        if (!spes) return;
+
+        let links = 0;
+        this.data.forEach(d => {
+            // Connessione automatica se collabora
+            if (d.Stato === 'In collaborazione') {
+                L.polyline([[spes.Lat, spes.Lng], [d.Lat, d.Lng]], { color: '#ffcc00', weight: 1.5, opacity: 0.5 }).addTo(this.ragLayer);
+                links++;
+            }
+            // Connessioni specifiche
+            if (d.Collabora) {
+                d.Collabora.split(',').forEach(targetName => {
+                    const target = this.data.find(x => x.Nome.trim() === targetName.trim());
+                    if (target) {
+                        L.polyline([[d.Lat, d.Lng], [target.Lat, target.Lng]], { color: '#fff', weight: 1, opacity: 0.3, dashArray: '5, 5' }).addTo(this.ragLayer);
+                        links++;
+                    }
+                });
+            }
+            // Marker ragnatela
+            L.circleMarker([d.Lat, d.Lng], { radius: 4, fillColor: '#4a9eff', color: '#fff', weight: 1, fillOpacity: 0.8 }).addTo(this.ragLayer);
+        });
+        document.getElementById('rag-stat').textContent = `${links} connessioni attive`;
+    },
+
     openEdit(idx) {
         this.editingIndex = idx;
         const d = this.data[idx];
         document.getElementById('edit-title').textContent = d.Nome;
         document.getElementById('edit-stato').value = d.Stato;
-        document.getElementById('edit-contatto').value = d.Contatto || '';
+        document.getElementById('edit-collab').value = d.Collabora || '';
         document.getElementById('edit-note').value = d.Note || '';
         document.getElementById('edit-panel').classList.add('open');
     },
 
-    closeEdit() {
-        document.getElementById('edit-panel').classList.remove('open');
-    },
+    closeEdit() { document.getElementById('edit-panel').classList.remove('open'); },
 
     async saveEdit() {
-        const btn = document.getElementById('save-btn');
         const d = this.data[this.editingIndex];
-        
         d.Stato = document.getElementById('edit-stato').value;
-        d.Contatto = document.getElementById('edit-contatto').value;
+        d.Collabora = document.getElementById('edit-collab').value;
         d.Note = document.getElementById('edit-note').value;
-
-        btn.disabled = true;
-        this.setSync('saving', 'Salvataggio...');
-
+        
+        document.getElementById('save-feedback').textContent = "Invio...";
         try {
-            // Nota: GAS richiede spesso il redirect. no-cors impedisce lettura risposta.
-            // Se il GAS non è configurato per CORS, questa fetch potrebbe apparire come errore
-            await fetch(this.SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors', 
-                body: JSON.stringify(d)
-            });
-            
-            this.setSync('ok', 'Salvato');
-            this.render();
-            this.updateStats();
-            setTimeout(() => this.closeEdit(), 1000);
-        } catch (e) {
-            this.setSync('error', 'Errore salvataggio');
-        } finally {
-            btn.disabled = false;
-        }
+            await fetch(this.SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(d) });
+            document.getElementById('save-feedback').textContent = "✓ Salvato";
+            this.render(); this.updateStats();
+            if (this.ragMap) this.drawRagnatela();
+            setTimeout(() => { this.closeEdit(); document.getElementById('save-feedback').textContent = ""; }, 1000);
+        } catch (e) { document.getElementById('save-feedback').textContent = "Errore!"; }
     },
 
-    updateStats() {
-        document.getElementById('d-total').textContent = this.data.length;
-        document.getElementById('d-col').textContent = this.data.filter(d => d.Stato === 'In collaborazione').length;
-        document.getElementById('d-cnt').textContent = this.data.filter(d => d.Stato === 'Contattato').length;
+    updateTheme() {
+        const root = document.documentElement;
+        root.style.setProperty('--accent', document.getElementById('style-accent').value);
+        root.style.setProperty('--bg', document.getElementById('style-bg').value);
     },
+
+    saveTheme() { alert("Stile applicato alla sessione corrente!"); },
 
     showPage(pageId, btn) {
         document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
         btn.classList.add('active');
         document.querySelectorAll('#page-mappa, #page-ragnatela, #page-stile').forEach(p => p.classList.remove('active'));
         document.getElementById('page-' + pageId).classList.add('active');
-        if(pageId === 'mappa') this.map.invalidateSize();
+        
+        if (pageId === 'ragnatela') {
+            this.initRagnatela();
+            setTimeout(() => { this.ragMap.invalidateSize(); this.drawRagnatela(); }, 100);
+        }
+        if (pageId === 'mappa') this.map.invalidateSize();
+    },
+
+    updateStats() {
+        document.getElementById('d-total').textContent = this.data.length;
+        document.getElementById('d-col').textContent = this.data.filter(d => d.Stato === 'In collaborazione').length;
+        document.getElementById('d-cnt').textContent = this.data.filter(d => d.Stato === 'Contattato').length;
     },
 
     setSync(state, label) {
@@ -331,8 +363,7 @@ const App = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => App.init());
+App.init();
 </script>
-
 </body>
 </html>
