@@ -54,6 +54,10 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--i
 .dash-col .dash-num{color:#2ecc71}
 .dash-col .dash-bar{background:#2ecc71}
 .dash-non .dash-bar{background:#e74c3c}
+.dash-stale .dash-num{color:#a05000}
+.dash-stale .dash-bar{background:#ffaa44}
+.dash-stale .dash-num{color:#a05000}
+.dash-stale .dash-bar{background:#ff9944}
 
 /* MAP AREA */
 #map-area{display:flex;flex:1;overflow:hidden;position:relative}
@@ -114,6 +118,8 @@ textarea{resize:vertical;min-height:46px}
 .collab-check:hover{background:var(--accent-light)}
 .collab-check input[type=checkbox]{accent-color:var(--accent);cursor:pointer}
 .edit-actions{display:flex;gap:7px;margin-top:9px;align-items:center}
+#dirty-indicator{font-size:.68rem;color:#a05000;background:#fff0e0;border:1px solid #ffcc88;border-radius:4px;padding:2px 7px;font-weight:700;display:none}
+#dirty-indicator.visible{display:inline-block}
 .save-btn{background:var(--accent);color:#fff;border:none;padding:7px 15px;border-radius:6px;font-family:var(--font);font-size:.79rem;font-weight:700;cursor:pointer}
 .save-btn:disabled{opacity:.4;cursor:not-allowed}
 .cancel-btn{background:var(--bg);color:var(--muted);border:1.5px solid var(--border);padding:7px 13px;border-radius:6px;font-family:var(--font);font-size:.79rem;font-weight:600;cursor:pointer}
@@ -219,6 +225,11 @@ body.presenting #btn-present{opacity:1;background:var(--accent)}
         <div class="dash-label">Non interessati</div>
         <div class="dash-bar"></div>
       </div>
+      <div class="dash-card dash-stale" onclick="filterDash('stale')" title="Filtra da ricontattare">
+        <div class="dash-num" id="d-stale">—</div>
+        <div class="dash-label">Da ricontattare</div>
+        <div class="dash-bar"></div>
+      </div>
     </div>
 
     <div id="map-area">
@@ -234,8 +245,10 @@ body.presenting #btn-present{opacity:1;background:var(--accent)}
             <button class="stato-btn" data-stato="Non interessato" style="color:#7a1020">Non int.</button>
           </div>
         </div>
-        <div id="map-controls" style="padding:7px 13px;border-bottom:1px solid var(--border);background:var(--bg)">
+        <div id="map-controls" style="padding:7px 13px;border-bottom:1px solid var(--border);background:var(--bg);display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <button id="btn-labels" onclick="toggleLabels()" style="font-size:.65rem;padding:3px 10px;border-radius:6px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted);transition:all .15s">🏷 Etichette: off</button>
+          <button onclick="esportaCSV()" style="font-size:.65rem;padding:3px 10px;border-radius:6px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted)">⬇ Esporta CSV</button>
+          <span id="next-refresh" style="font-size:.62rem;color:var(--muted);margin-left:auto"></span>
         </div>
         <div id="list-count"></div>
         <div id="list-container"></div>
@@ -352,7 +365,8 @@ body.presenting #btn-present{opacity:1;background:var(--accent)}
   </div>
   <div class="edit-actions">
     <button class="save-btn" id="save-btn" onclick="saveEdit()">Salva</button>
-    <button class="cancel-btn" onclick="closeEdit()">Chiudi</button>
+    <button class="cancel-btn" onclick="closeEditGuard()">Chiudi</button>
+    <span id="dirty-indicator">● modifiche non salvate</span>
     <span id="save-feedback"></span>
   </div>
 </div>
@@ -463,17 +477,64 @@ function updateDashboard() {
   document.getElementById('d-cnt').textContent   = DATA.filter(d => d.Stato === 'Contattato').length;
   document.getElementById('d-da').textContent    = DATA.filter(d => d.Stato === 'Da contattare').length;
   document.getElementById('d-non').textContent   = DATA.filter(d => d.Stato === 'Non interessato').length;
+  document.getElementById('d-stale').textContent = DATA.filter(d => isStaleGlobal(d)).length;
+}
+
+// isStale accessibile prima di DOMContentLoaded per updateDashboard
+function isStaleGlobal(d) {
+  if (!d.DataContatto) return false;
+  if (d.Stato === 'Da contattare' || d.Stato === 'Non interessato') return false;
+  const days = (Date.now() - new Date(d.DataContatto)) / (1000*60*60*24);
+  return days > STALE_DAYS;
 }
 
 function filterDash(stato) {
   activeStato = stato;
   document.querySelectorAll('.dash-card').forEach(c => c.classList.remove('active-filter'));
-  const map = {'In collaborazione':'.dash-col','Contattato':'.dash-cnt','Da contattare':'.dash-da','Non interessato':'.dash-non'};
+  const map = {'In collaborazione':'.dash-col','Contattato':'.dash-cnt','Da contattare':'.dash-da','Non interessato':'.dash-non','stale':'.dash-stale'};
   if (map[stato]) document.querySelector(map[stato]).classList.add('active-filter');
+  // stale non corrisponde a un valore Stato, deseleziona i bottoni stato
   document.querySelectorAll('.stato-btn').forEach(b => b.classList.toggle('active', b.dataset.stato === stato));
   renderList(); renderMarkers();
 }
 
+// =====================================================================
+// AUTO-REFRESH ogni 5 minuti con countdown visibile
+// =====================================================================
+const REFRESH_INTERVAL = 5 * 60; // secondi
+let refreshCountdown = REFRESH_INTERVAL;
+let refreshTimer = null;
+
+function startRefreshCycle() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshCountdown = REFRESH_INTERVAL;
+  refreshTimer = setInterval(() => {
+    refreshCountdown--;
+    const m = Math.floor(refreshCountdown / 60);
+    const s = String(refreshCountdown % 60).padStart(2, '0');
+    const el = document.getElementById('next-refresh');
+    if (el) el.textContent = `↻ aggiorna tra ${m}:${s}`;
+    if (refreshCountdown <= 0) {
+      loadFromSheet();
+      refreshCountdown = REFRESH_INTERVAL;
+    }
+  }, 1000);
+}
+
+// =====================================================================
+// ESPORTA CSV (dati filtrati correnti)
+// =====================================================================
+function esportaCSV() {
+  const items = typeof filteredDataGlobal === 'function' ? filteredDataGlobal() : DATA;
+  const cols = ['Nome','Categoria','Stato','Contatto','DataContatto','Note','Descrizione','Collabora','Lat','Lng'];
+  const escape = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const rows = [cols.join(','), ...items.map(d => cols.map(c => escape(d[c])).join(','))];
+  const blob = new Blob([rows.join('\n')], {type: 'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rete_monelli_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
 // =====================================================================
 // LOAD DAL FOGLIO
 // FIX: cache-bust con ?t= per evitare risposta stantia di Apps Script (fino a 6h)
@@ -482,7 +543,6 @@ async function loadFromSheet() {
   document.getElementById('loading-msg').textContent = 'Lettura del foglio…';
   setSyncStatus('saving', 'Caricamento…');
   try {
-    // FIX: aggiunto timestamp per forzare risposta fresca
     const res  = await fetch(SCRIPT_URL + '?t=' + Date.now(), { method: 'GET' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
@@ -494,13 +554,11 @@ async function loadFromSheet() {
         Contatto:    r['Contatto']    || '',
         Note:        r['Note']        || '',
         Descrizione: r['Descrizione'] || '',
-        // FIX: parseFloat robusto; null invece di 0 per distinguere dato mancante
         Lat: parseFloat(String(r['Lat']  || '').replace(',', '.')) || null,
         Lng: parseFloat(String(r['Lng']  || '').replace(',', '.')) || null,
         Collabora:   r['Collabora']   || '',
         DataContatto:r['DataContatto']|| ''
       })).filter(d => {
-        // FIX: log esplicito per record scartati, aiuta il debug del foglio
         if (!d.Nome || d.Lat === null || d.Lng === null) {
           if (d.Nome) console.warn('[SKIP] Coordinate mancanti o non valide per:', d.Nome);
           return false;
@@ -516,9 +574,13 @@ async function loadFromSheet() {
     DATA = FALLBACK.map(d => ({...d}));
     setSyncStatus('error', 'Offline — dati locali');
   }
-  document.getElementById('loading-overlay').style.display = 'none';
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) overlay.style.display = 'none';
   updateDashboard();
-  buildCatFilters(); renderList(); renderMarkers();
+  if (typeof buildCatFilters === 'function') buildCatFilters();
+  if (typeof renderList    === 'function') renderList();
+  if (typeof renderMarkers === 'function') renderMarkers();
+  startRefreshCycle();
 }
 
 // =====================================================================
@@ -530,10 +592,10 @@ async function saveRow(rowData) {
   setSyncStatus('saving', 'Salvataggio…');
   try {
     await fetch(SCRIPT_URL, {
-      method:   'POST',
-      mode:     'no-cors',
-      headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify(rowData)
+      method:  'POST',
+      mode:    'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify(rowData)
     });
     setSyncStatus('ok', 'Salvato ✓');
     setTimeout(() => setSyncStatus('ok', 'Sincronizzato'), 2500);
@@ -580,10 +642,9 @@ async function inviaSuggerimento() {  // FIX: era "inviaStuggerimento"
   try {
     // FIX: payload con nomi campo corretti, allineati al doPost Apps Script
     const res = await fetch(SCRIPT_URL, {
-      method:   'POST',
-      mode:     'no-cors',
-      headers:  { 'Content-Type': 'text/plain' },
-      body:     JSON.stringify({
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
         _tipo:              'suggerimento',
         Suggerimento:       nome,
         InfoSuggerimento:   info,
@@ -591,7 +652,10 @@ async function inviaSuggerimento() {  // FIX: era "inviaStuggerimento"
         DataSuggerimento:   new Date().toLocaleDateString('it-IT')
       })
     });
-  fb.textContent = '✓ Grazie!'; fb.style.color = '#2ecc71';;
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message || 'Errore');
+    fb.textContent = '✓ Grazie!'; fb.style.color = '#2ecc71';
     setTimeout(closeSuggerisci, 1500);
   } catch(e) {
     fb.textContent = 'Errore: ' + e.message; fb.style.color = '#e74c3c';
@@ -643,6 +707,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function filteredData() {
     return DATA.map((d, i) => ({...d, _i: i})).filter(d => {
       if (!activeCategories.has(d.Categoria)) return false;
+      if (activeStato === 'stale') return isStaleGlobal(d);
       if (activeStato !== 'tutti' && d.Stato !== activeStato) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -650,6 +715,19 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       return true;
     });
+  }
+  // Esponi per esportaCSV
+  window.filteredDataGlobal = filteredData;
+
+  // usa la versione globale
+  function isStale(d) { return isStaleGlobal(d); }
+
+  let hasUnsavedChanges = false;
+
+  function setDirty(val) {
+    hasUnsavedChanges = val;
+    const ind = document.getElementById('dirty-indicator');
+    if (ind) ind.classList.toggle('visible', val);
   }
 
   let showLabels = false, labelMarkers = [];
@@ -665,13 +743,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   // Esposta globalmente per onclick inline
   window.toggleLabels = toggleLabels;
-
-  function isStale(d) {
-    if (!d.DataContatto) return false;
-    if (d.Stato === 'Da contattare' || d.Stato === 'Non interessato') return false;
-    const days = (Date.now() - new Date(d.DataContatto)) / (1000*60*60*24);
-    return days > STALE_DAYS;
-  }
 
   let presentationMode = false;
   function togglePresentation() {
@@ -755,6 +826,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('edit-data').value          = d.DataContatto|| '';
     document.getElementById('edit-note').value          = d.Note        || '';
     document.getElementById('save-feedback').textContent= '';
+    setDirty(false);
     const cur  = (d.Collabora||'').split(',').map(s => s.trim()).filter(Boolean);
     const list = document.getElementById('collab-list');
     list.innerHTML = '';
@@ -762,7 +834,13 @@ document.addEventListener('DOMContentLoaded', function() {
       const lbl = document.createElement('label');
       lbl.className = 'collab-check';
       lbl.innerHTML = `<input type="checkbox" value="${x.Nome}" ${cur.includes(x.Nome)?'checked':''}><span style="width:7px;height:7px;border-radius:50%;background:${CAT_COLORS[x.Categoria]||'#aaa'};display:inline-block;flex-shrink:0"></span>${x.Nome}`;
+      lbl.querySelector('input').addEventListener('change', () => setDirty(true));
       list.appendChild(lbl);
+    });
+    // Segna dirty al primo cambiamento su qualsiasi campo
+    ['edit-stato','edit-contatto','edit-data','edit-note'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => setDirty(true), {once: true});
+      document.getElementById(id).addEventListener('change', () => setDirty(true), {once: true});
     });
     document.getElementById('edit-panel').classList.add('open');
   }
@@ -770,9 +848,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function closeEdit() {
     document.getElementById('edit-panel').classList.remove('open');
+    setDirty(false);
     editingIndex = null;
   }
   window.closeEdit = closeEdit;
+
+  // Chiusura con guardia: chiede conferma se ci sono modifiche non salvate
+  function closeEditGuard() {
+    if (hasUnsavedChanges) {
+      if (!confirm('Hai modifiche non salvate. Chiudere senza salvare?')) return;
+    }
+    closeEdit();
+  }
+  window.closeEditGuard = closeEditGuard;
 
   async function saveEdit() {
     if (editingIndex === null) return;
@@ -785,10 +873,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const btn = document.getElementById('save-btn');
     btn.disabled = true;
     document.getElementById('save-feedback').textContent = 'Salvataggio…';
-    // FIX: saveRow ora restituisce true/false in base alla risposta reale del server
     const ok = await saveRow(d);
     btn.disabled = false;
     if (ok) {
+      setDirty(false);
       document.getElementById('save-feedback').textContent = '✓ Salvato';
       setTimeout(() => document.getElementById('save-feedback').textContent = '', 2000);
       const si = editingIndex;
@@ -868,6 +956,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // Esponi funzioni usate da HTML inline
   window.renderList    = renderList;
   window.renderMarkers = renderMarkers;
+  window.setDirty      = setDirty;
+
+  // Avviso browser se si naviga via con modifiche non salvate
+  window.addEventListener('beforeunload', e => {
+    if (hasUnsavedChanges) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 
   // =====================================================================
   // RAGNATELA
