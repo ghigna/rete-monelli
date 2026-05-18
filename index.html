@@ -529,14 +529,13 @@ async function loadFromSheet() {
 async function saveRow(rowData) {
   setSyncStatus('saving', 'Salvataggio…');
   try {
-    const res = await fetch(SCRIPT_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(rowData)
+    await fetch(SCRIPT_URL, {
+      method:   'POST',
+      mode:     'no-cors',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify(rowData)
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    if (json.status !== 'ok') throw new Error(json.message || 'Errore sconosciuto');
     setSyncStatus('ok', 'Salvato ✓');
     setTimeout(() => setSyncStatus('ok', 'Sincronizzato'), 2500);
     return true;
@@ -582,9 +581,11 @@ async function inviaSuggerimento() {  // FIX: era "inviaStuggerimento"
   try {
     // FIX: payload con nomi campo corretti, allineati al doPost Apps Script
     const res = await fetch(SCRIPT_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
+      method:   'POST',
+      mode:     'no-cors',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify({
         _tipo:              'suggerimento',
         Suggerimento:       nome,
         InfoSuggerimento:   info,
@@ -592,10 +593,7 @@ async function inviaSuggerimento() {  // FIX: era "inviaStuggerimento"
         DataSuggerimento:   new Date().toLocaleDateString('it-IT')
       })
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    if (json.status !== 'ok') throw new Error(json.message || 'Errore');
-    fb.textContent = '✓ Grazie!'; fb.style.color = '#2ecc71';
+  fb.textContent = '✓ Grazie!'; fb.style.color = '#2ecc71';;
     setTimeout(closeSuggerisci, 1500);
   } catch(e) {
     fb.textContent = 'Errore: ' + e.message; fb.style.color = '#e74c3c';
