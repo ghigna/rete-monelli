@@ -779,9 +779,10 @@ async function inviaSuggerimento() {  // FIX: era "inviaStuggerimento"
   btn.disabled = true; btn.textContent = 'Invio…'; fb.textContent = '';
   try {
     // FIX: payload con nomi campo corretti, allineati al doPost Apps Script
-    const res = await fetch(SCRIPT_URL, {
+   await fetch(SCRIPT_URL, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      mode:    'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
       body:    JSON.stringify({
         _tipo:              'suggerimento',
         Suggerimento:       nome,
@@ -790,9 +791,6 @@ async function inviaSuggerimento() {  // FIX: era "inviaStuggerimento"
         DataSuggerimento:   new Date().toLocaleDateString('it-IT')
       })
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    if (json.status !== 'ok') throw new Error(json.message || 'Errore');
     fb.textContent = '✓ Grazie!'; fb.style.color = '#2ecc71';
     setTimeout(closeSuggerisci, 1500);
   } catch(e) {
