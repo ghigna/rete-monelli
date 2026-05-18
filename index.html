@@ -250,7 +250,16 @@ body.presenting #btn-present{opacity:1;background:var(--accent)}
           <button onclick="esportaCSV()" style="font-size:.65rem;padding:3px 10px;border-radius:6px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted)">⬇ Esporta CSV</button>
           <span id="next-refresh" style="font-size:.62rem;color:var(--muted);margin-left:auto"></span>
         </div>
-        <div id="list-count"></div>
+        <div id="list-count-bar" style="display:flex;align-items:center;padding:5px 13px 3px;gap:6px;border-bottom:1px solid var(--border)">
+          <span id="list-count" style="font-size:.69rem;color:var(--muted);font-weight:700;flex:1"></span>
+          <label style="font-size:.62rem;color:var(--muted);font-weight:700;white-space:nowrap">Ordina:</label>
+          <select id="sort-select" onchange="renderList()" style="font-size:.65rem;padding:2px 5px;border:1.5px solid var(--border);border-radius:5px;font-family:var(--font);background:#fff;color:var(--ink);cursor:pointer;outline:none">
+            <option value="default">Foglio</option>
+            <option value="nome">Nome ↑</option>
+            <option value="stato">Stato</option>
+            <option value="data">Ultimo contatto</option>
+          </select>
+        </div>
         <div id="list-container"></div>
       </div>
       <div id="map"></div>
@@ -753,8 +762,22 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   window.togglePresentation = togglePresentation;
 
+  const STATO_ORDER = {'In collaborazione':0,'Contattato':1,'Da contattare':2,'Non interessato':3};
+
   function renderList() {
-    const items = filteredData();
+    let items = filteredData();
+    const sort = document.getElementById('sort-select')?.value || 'default';
+    if (sort === 'nome') {
+      items = [...items].sort((a,b) => a.Nome.localeCompare(b.Nome, 'it'));
+    } else if (sort === 'stato') {
+      items = [...items].sort((a,b) => (STATO_ORDER[a.Stato]??9) - (STATO_ORDER[b.Stato]??9));
+    } else if (sort === 'data') {
+      items = [...items].sort((a,b) => {
+        const da = a.DataContatto ? new Date(a.DataContatto) : new Date(0);
+        const db = b.DataContatto ? new Date(b.DataContatto) : new Date(0);
+        return db - da; // più recenti prima
+      });
+    }
     document.getElementById('list-count').textContent = items.length + ' realtà';
     document.getElementById('list-container').innerHTML = items.map(d => {
       const color = CAT_COLORS[d.Categoria] || '#aaa';
@@ -763,8 +786,13 @@ document.addEventListener('DOMContentLoaded', function() {
       const st    = isSpes(d) ? '<span class="spes-label">⭐ origine</span>' : '';
       const stale = isStale(d) ? '<span class="stale-badge">⏰ ricontattare</span>' : '';
       return `<div class="list-item ${sc} ${selectedIndex === d._i ? 'selected' : ''}" data-idx="${d._i}" onclick="selectItem(${d._i})">
-        <div class="item-name">${d.Nome}</div>
-        <div class="item-meta"><div class="cat-dot" style="background:${color}"></div><span class="item-cat">${CAT_LABELS[d.Categoria]||d.Categoria}</span>${st}${stale}<span class="stato-badge ${cls}">${d.Stato}</span></div>
+        <div style="display:flex;align-items:flex-start;gap:4px">
+          <div style="flex:1;min-width:0">
+            <div class="item-name">${d.Nome}</div>
+            <div class="item-meta"><div class="cat-dot" style="background:${color}"></div><span class="item-cat">${CAT_LABELS[d.Categoria]||d.Categoria}</span>${st}${stale}<span class="stato-badge ${cls}">${d.Stato}</span></div>
+          </div>
+          <button onclick="event.stopPropagation();gotoItem(${d._i})" title="Vai alla posizione" style="flex-shrink:0;background:none;border:1.5px solid var(--border);border-radius:5px;padding:3px 6px;cursor:pointer;font-size:.7rem;color:var(--muted);line-height:1;margin-top:2px" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">⊙</button>
+        </div>
       </div>`;
     }).join('');
   }
@@ -813,6 +841,24 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>`).openOn(map);
   }
   window.selectItem = selectItem;
+
+  // Centra la mappa sul marker senza aprire popup né selezionare l'item
+  function gotoItem(idx) {
+    const d = DATA[idx];
+    if (!d) return;
+    map.flyTo([d.Lat, d.Lng], 16, {duration: .7});
+    // Lampeggia il marker per 1 secondo per indicare la posizione
+    const m = markers.find(m => m._di === idx);
+    if (m) {
+      const origIcon = m.getIcon();
+      const color = CAT_COLORS[d.Categoria] || '#aaa';
+      m.setIcon(makeIcon('#ffffff', true, isSpes(d)));
+      setTimeout(() => m.setIcon(makeIcon(color, selectedIndex === idx, isSpes(d))), 400);
+      setTimeout(() => m.setIcon(makeIcon('#ffffff', true, isSpes(d))), 800);
+      setTimeout(() => m.setIcon(makeIcon(color, selectedIndex === idx, isSpes(d))), 1200);
+    }
+  }
+  window.gotoItem = gotoItem;
 
   // =====================================================================
   // EDIT PANEL
