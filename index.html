@@ -532,7 +532,6 @@ async function saveRow(rowData) {
     await fetch(SCRIPT_URL, {
       method:   'POST',
       mode:     'no-cors',
-      redirect: 'follow',
       headers:  { 'Content-Type': 'text/plain' },
       body:     JSON.stringify(rowData)
     });
@@ -583,7 +582,6 @@ async function inviaSuggerimento() {  // FIX: era "inviaStuggerimento"
     const res = await fetch(SCRIPT_URL, {
       method:   'POST',
       mode:     'no-cors',
-      redirect: 'follow',
       headers:  { 'Content-Type': 'text/plain' },
       body:     JSON.stringify({
         _tipo:              'suggerimento',
