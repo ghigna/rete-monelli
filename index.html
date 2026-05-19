@@ -2,352 +2,884 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Stalkers di Comunità — Rete Monelli</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link id="font-link" href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --accent:#0000ff;--accent-dark:#0000cc;--accent-light:#e8e8ff;--accent-mid:#9999ff;
-  --bg:#f5f5ff;--ink:#0a0a2e;--muted:#6666aa;--panel:#fff;--border:#d0d0ee;--spes:#ffcc00;
-  --font:'Nunito',sans-serif;
+/* ================================================================
+   RESET & TOKENS
+   ================================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent:       #0000ff;
+  --accent-dark:  #0000cc;
+  --accent-light: #e8e8ff;
+  --accent-mid:   #9999ff;
+  --bg:           #f5f5ff;
+  --ink:          #0a0a2e;
+  --muted:        #6666aa;
+  --panel:        #fff;
+  --border:       #d0d0ee;
+  --spes:         #ffcc00;
+  --font:         'Nunito', sans-serif;
+  --nav-h:        52px;
+  --sidebar-w:    300px;
+  --safe-bottom:  env(safe-area-inset-bottom, 0px);
+  --safe-top:     env(safe-area-inset-top, 0px);
+  --safe-left:    env(safe-area-inset-left, 0px);
+  --safe-right:   env(safe-area-inset-right, 0px);
 }
-html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--ink)}
-#app{display:flex;flex-direction:column;height:100vh}
 
-/* NAV */
-#nav{display:flex;background:var(--accent);flex-shrink:0;min-height:52px;align-items:stretch}
-.nav-tab{padding:0 20px;display:flex;align-items:center;gap:7px;font-family:var(--font);font-size:.78rem;font-weight:700;color:rgba(255,255,255,.5);cursor:pointer;border:none;background:none;letter-spacing:.05em;text-transform:uppercase;border-bottom:3px solid transparent;transition:all .18s;white-space:nowrap}
-.nav-tab.active{color:#fff;border-bottom-color:var(--spes)}
-.nav-tab:hover:not(.active){color:rgba(255,255,255,.8)}
-#nav-title{padding:0 20px;display:flex;align-items:center;gap:10px;margin-right:auto}
-#nav-title h1{font-size:.95rem;font-weight:800;color:#fff;letter-spacing:-.01em}
-#nav-title span{font-size:.7rem;color:rgba(255,255,255,.45);font-weight:400}
-#sync-status{display:flex;align-items:center;gap:6px;padding:0 16px;font-size:.7rem;color:rgba(255,255,255,.4)}
-#sync-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3);transition:background .3s;flex-shrink:0}
-#sync-dot.ok{background:#4cff9a}
-#sync-dot.saving{background:#ffcc00;animation:pulse .8s infinite}
-#sync-dot.error{background:#ff6666}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--ink); }
+#app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
 
-/* PAGES */
-#page-mappa,#page-ragnatela,#page-stile{display:none;flex:1;overflow:hidden}
-#page-mappa.active{display:flex;flex-direction:column}
-#page-ragnatela.active{display:flex}
-#page-stile.active{display:block;overflow-y:auto}
+/* ================================================================
+   NAV
+   ================================================================ */
+#nav {
+  display: flex;
+  background: var(--accent);
+  flex-shrink: 0;
+  min-height: var(--nav-h);
+  align-items: stretch;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  padding-top: var(--safe-top);
+  position: relative;
+  z-index: 700;
+}
 
-/* DASHBOARD */
-#dashboard{display:flex;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--panel)}
-.dash-card{flex:1;padding:11px 16px;border-right:1px solid var(--border);cursor:pointer;transition:background .15s;position:relative;user-select:none}
-.dash-card:last-child{border-right:none}
-.dash-card:hover{background:var(--bg)}
-.dash-card.active-filter{background:var(--accent-light)}
-.dash-num{font-size:1.5rem;font-weight:800;line-height:1;color:var(--ink)}
-.dash-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:3px}
-.dash-bar{position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0}
-.dash-total .dash-bar{background:var(--accent)}
-.dash-da .dash-bar{background:#f5c542}
-.dash-cnt .dash-bar{background:#4a9eff}
-.dash-col .dash-num{color:#2ecc71}
-.dash-col .dash-bar{background:#2ecc71}
-.dash-non .dash-bar{background:#e74c3c}
-.dash-stale .dash-num{color:#a05000}
-.dash-stale .dash-bar{background:#ffaa44}
-.dash-stale .dash-num{color:#a05000}
-.dash-stale .dash-bar{background:#ff9944}
+.nav-tab {
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font);
+  font-size: .78rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.5);
+  cursor: pointer;
+  border: none;
+  background: none;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  border-bottom: 3px solid transparent;
+  transition: color .18s, border-color .18s;
+  white-space: nowrap;
+  min-height: 44px; /* touch target */
+}
+.nav-tab.active  { color: #fff; border-bottom-color: var(--spes); }
+.nav-tab:hover:not(.active) { color: rgba(255,255,255,.8); }
 
-/* MAP AREA */
-#map-area{display:flex;flex:1;overflow:hidden;position:relative}
+#nav-title {
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+}
+#nav-title h1 { font-size: .95rem; font-weight: 800; color: #fff; letter-spacing: -.01em; }
+#nav-title span { font-size: .7rem; color: rgba(255,255,255,.45); font-weight: 400; }
 
-/* SIDEBAR */
-#sidebar{width:300px;flex-shrink:0;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--border);overflow:hidden}
-#filter-bar{padding:11px 13px;border-bottom:1px solid var(--border);background:var(--bg)}
-#search-input{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.81rem;background:#fff;color:var(--ink);outline:none;margin-bottom:9px}
-#search-input:focus{border-color:var(--accent)}
-.filter-row{display:flex;gap:5px;flex-wrap:wrap}
-.filter-btn{font-size:.66rem;padding:3px 8px;border-radius:20px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted);transition:all .15s;white-space:nowrap}
-#stato-filters{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)}
-.stato-btn{font-size:.66rem;padding:3px 8px;border-radius:6px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted)}
-.stato-btn.active{border-color:currentColor;background:var(--accent-light)}
-#list-container{flex:1;overflow-y:auto}
-#list-count{font-size:.69rem;color:var(--muted);padding:7px 13px 3px;font-weight:700}
-.list-item{padding:9px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
-.list-item:hover{background:var(--bg)}
-.list-item.selected{background:var(--accent-light);border-left:3px solid var(--accent)}
-.list-item.spes-item{border-left:3px solid var(--spes);background:#fffbe6}
-.list-item.spes-item.selected{background:#fff5b0}
-.item-name{font-size:.81rem;font-weight:700;line-height:1.3}
-.item-meta{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap}
-.cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.item-cat{font-size:.67rem;color:var(--muted)}
-.stato-badge{font-size:.58rem;padding:1px 5px;border-radius:4px;margin-left:auto;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-.spes-label{font-size:.58rem;color:#7a5c00;background:#fff3b0;border:1px solid var(--spes);border-radius:4px;padding:1px 5px;font-weight:700}
-.stale-badge{font-size:.58rem;color:#a05000;background:#fff0e0;border:1px solid #ffcc88;border-radius:4px;padding:1px 5px;font-weight:700}
+#sync-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  font-size: .7rem;
+  color: rgba(255,255,255,.4);
+}
+#sync-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.3);
+  transition: background .3s;
+  flex-shrink: 0;
+}
+#sync-dot.ok     { background: #4cff9a; }
+#sync-dot.saving { background: #ffcc00; animation: pulse .8s infinite; }
+#sync-dot.error  { background: #ff6666; }
 
-/* MAP */
-#map{flex:1}
-.popup-wrap{font-family:var(--font);min-width:230px;max-width:290px}
-.popup-nome{font-size:.93rem;font-weight:800;line-height:1.25;margin-bottom:5px}
-.popup-spes-tag{display:inline-block;font-size:.6rem;background:var(--spes);color:#664d00;border-radius:4px;padding:1px 7px;font-weight:700;margin-bottom:7px}
-.popup-cat{font-size:.69rem;color:var(--muted);margin-bottom:7px;display:flex;align-items:center;gap:5px;font-weight:600}
-.popup-desc{font-size:.76rem;line-height:1.55;color:#333355;margin-bottom:9px;background:var(--bg);border-radius:6px;padding:7px 9px}
-.popup-field{font-size:.74rem;margin-bottom:5px}
-.popup-field label{font-weight:700;color:var(--muted);display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
-.popup-actions{margin-top:10px}
-.popup-btn{font-size:.72rem;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-family:var(--font);font-weight:700;background:var(--accent);color:#fff}
-.stato-da{background:#fff3cd;color:#7a5c00}
-.stato-contattato{background:#ddeeff;color:#003d80}
-.stato-collabo{background:#d4f5e6;color:#0a5c30}
-.stato-non{background:#ffdde0;color:#7a1020}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
 
-/* EDIT PANEL */
-#edit-panel{position:fixed;bottom:0;left:300px;right:0;background:#fff;border-top:3px solid var(--accent);padding:13px 18px;transform:translateY(100%);transition:transform .25s ease;z-index:1000;box-shadow:0 -4px 24px rgba(0,0,0,.1)}
-#edit-panel.open{transform:translateY(0)}
-#edit-panel h3{font-size:.93rem;font-weight:800;margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
-.edit-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
-.edit-field{display:flex;flex-direction:column;gap:3px;min-width:120px;flex:1}
-.edit-field label{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
-.edit-field input,.edit-field select,.edit-field textarea{padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.79rem;color:var(--ink);background:var(--bg);outline:none}
-.edit-field input:focus,.edit-field select:focus,.edit-field textarea:focus{border-color:var(--accent)}
-textarea{resize:vertical;min-height:46px}
-#collab-list{max-height:100px;overflow-y:auto;border:1.5px solid var(--border);border-radius:6px;background:var(--bg);padding:4px;display:flex;flex-direction:column;gap:2px}
-.collab-check{display:flex;align-items:center;gap:6px;padding:2px 4px;border-radius:4px;cursor:pointer;font-size:.74rem;font-weight:600}
-.collab-check:hover{background:var(--accent-light)}
-.collab-check input[type=checkbox]{accent-color:var(--accent);cursor:pointer}
-.edit-actions{display:flex;gap:7px;margin-top:9px;align-items:center}
-#dirty-indicator{font-size:.68rem;color:#a05000;background:#fff0e0;border:1px solid #ffcc88;border-radius:4px;padding:2px 7px;font-weight:700;display:none}
-#dirty-indicator.visible{display:inline-block}
-.save-btn{background:var(--accent);color:#fff;border:none;padding:7px 15px;border-radius:6px;font-family:var(--font);font-size:.79rem;font-weight:700;cursor:pointer}
-.save-btn:disabled{opacity:.4;cursor:not-allowed}
-.cancel-btn{background:var(--bg);color:var(--muted);border:1.5px solid var(--border);padding:7px 13px;border-radius:6px;font-family:var(--font);font-size:.79rem;font-weight:600;cursor:pointer}
-#save-feedback{font-size:.73rem;color:var(--muted);font-weight:600}
+/* ================================================================
+   PAGES
+   ================================================================ */
+#page-mappa,
+#page-ragnatela,
+#page-stile { display: none; flex: 1; overflow: hidden; }
+#page-mappa.active    { display: flex; flex-direction: column; }
+#page-ragnatela.active { display: flex; }
+#page-stile.active    { display: block; overflow-y: auto; }
 
-/* LEGEND */
-#legend{position:absolute;bottom:20px;right:12px;z-index:500;background:rgba(255,255,255,.97);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:.69rem;box-shadow:0 2px 16px rgba(0,0,0,.08)}
-#legend h4{font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;font-weight:700}
-.leg-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-weight:600}
-.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+/* ================================================================
+   DASHBOARD
+   ================================================================ */
+#dashboard {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+#dashboard::-webkit-scrollbar { display: none; }
 
-/* PRESENTATION */
-body.presenting #sidebar{display:none}
-body.presenting #dashboard{display:none}
-body.presenting #edit-panel{left:0}
-body.presenting #btn-present{opacity:1;background:var(--accent)}
-#page-ragnatela{position:relative}
-#ragnatela-map{position:absolute;inset:0;z-index:0}
-#ragnatela-info{position:absolute;top:16px;left:16px;z-index:1000;background:rgba(0,0,20,.82);border:1px solid rgba(100,100,255,.35);border-radius:10px;padding:13px 16px;color:rgba(255,255,255,.8);font-size:.76rem;max-width:240px;backdrop-filter:blur(8px)}
-#ragnatela-info h3{font-size:.88rem;font-weight:800;color:#fff;margin-bottom:5px}
-#ragnatela-info p{font-size:.71rem;color:rgba(255,255,255,.5);line-height:1.5}
-#ragnatela-count{margin-top:8px;font-size:.7rem;color:var(--spes);font-weight:700}
-.rag-tooltip{font-family:var(--font);font-size:.78rem;background:rgba(0,0,20,.9);border:1px solid rgba(100,100,255,.4);border-radius:6px;color:#fff;padding:5px 9px;box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.dash-card {
+  flex: 1;
+  min-width: 90px;
+  padding: 11px 16px;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .15s;
+  position: relative;
+  user-select: none;
+  /* touch target */
+  min-height: 56px;
+}
+.dash-card:last-child { border-right: none; }
+.dash-card:hover      { background: var(--bg); }
+.dash-card.active-filter { background: var(--accent-light); }
 
-/* STILE */
-#page-stile{background:var(--bg);padding:32px}
-.stile-wrap{max-width:720px;margin:0 auto}
-.stile-wrap h2{font-size:1.4rem;font-weight:800;color:var(--ink);margin-bottom:6px}
-.stile-wrap>p{font-size:.82rem;color:var(--muted);margin-bottom:28px}
-.stile-section{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:22px 24px;margin-bottom:20px}
-.stile-section h3{font-size:.85rem;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.07em;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:8px}
-.stile-row{display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap}
-.stile-row label{font-size:.78rem;font-weight:700;color:var(--ink);min-width:130px}
-.stile-row input[type=color]{width:44px;height:32px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px;background:#fff}
-.color-hex{font-size:.75rem;font-weight:700;color:var(--muted);min-width:64px;font-family:monospace}
-.font-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:4px}
-.font-card{border:2px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .15s}
-.font-card:hover,.font-card.selected{border-color:var(--accent);background:var(--accent-light)}
-.font-card .font-name{font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
-.font-card .font-sample{font-size:1rem;color:var(--ink)}
-.stile-apply{background:var(--accent);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-family:var(--font);font-size:.82rem;font-weight:800;cursor:pointer;margin-top:6px}
-.stile-reset{background:var(--bg);color:var(--muted);border:1.5px solid var(--border);padding:10px 18px;border-radius:8px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;margin-top:6px;margin-left:8px}
-.preview-box{margin-top:14px;border:1.5px dashed var(--border);border-radius:8px;padding:14px 18px;background:var(--bg)}
-.preview-header{height:36px;border-radius:6px;background:var(--accent);display:flex;align-items:center;padding:0 14px;margin-bottom:10px}
-.preview-header span{color:#fff;font-weight:800;font-size:.82rem}
-.preview-btn{display:inline-block;background:var(--accent);color:#fff;border-radius:5px;padding:5px 12px;font-size:.76rem;font-weight:700}
-.preview-text{font-size:.82rem;color:var(--ink);margin-bottom:8px}
-.preview-muted{font-size:.72rem;color:var(--muted)}
+.dash-num   { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--ink); }
+.dash-label { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 3px; }
+.dash-bar   { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; border-radius: 0; }
 
-/* LOADING */
-#loading-overlay{position:fixed;inset:0;background:rgba(245,245,255,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000;gap:14px}
-#loading-overlay h2{font-size:1.4rem;font-weight:800;color:var(--accent)}
-#loading-overlay p{font-size:.81rem;color:var(--muted);font-weight:600}
-.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.leaflet-popup-content-wrapper{border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.14);border:1.5px solid var(--border)}
-.leaflet-popup-content{margin:13px 15px}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--accent-mid);border-radius:2px}
+.dash-total .dash-bar { background: var(--accent); }
+.dash-da    .dash-bar { background: #f5c542; }
+.dash-cnt   .dash-bar { background: #4a9eff; }
+.dash-col .dash-num   { color: #2ecc71; }
+.dash-col .dash-bar   { background: #2ecc71; }
+.dash-non   .dash-bar { background: #e74c3c; }
+.dash-stale .dash-num { color: #a05000; }
+.dash-stale .dash-bar { background: #ff9944; }
 
-/* =====================================================================
-   MOBILE RESPONSIVE — breakpoint 768px
-   Layout: mappa fullscreen, lista come pannello laterale a scomparsa,
-   tasto ☰ in nav, niente dashboard, niente tab Stile
-   ===================================================================== */
+/* ================================================================
+   MAP AREA
+   ================================================================ */
+#map-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ================================================================
+   SIDEBAR
+   ================================================================ */
+#sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  transition: none;
+}
+
+#filter-bar {
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+#search-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: .81rem;
+  background: #fff;
+  color: var(--ink);
+  outline: none;
+  margin-bottom: 9px;
+  /* touch */
+  min-height: 44px;
+  -webkit-appearance: none;
+}
+#search-input:focus { border-color: var(--accent); }
+
+.filter-row  { display: flex; gap: 5px; flex-wrap: wrap; }
+.filter-btn  {
+  font-size: .66rem;
+  padding: 6px 10px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-family: var(--font);
+  font-weight: 700;
+  color: var(--muted);
+  transition: all .15s;
+  white-space: nowrap;
+  min-height: 32px;
+}
+
+#stato-filters {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+}
+.stato-btn {
+  font-size: .66rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-family: var(--font);
+  font-weight: 700;
+  color: var(--muted);
+  min-height: 32px;
+}
+.stato-btn.active { border-color: currentColor; background: var(--accent-light); }
+
+#list-container { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+#list-count {
+  font-size: .69rem;
+  color: var(--muted);
+  padding: 7px 13px 3px;
+  font-weight: 700;
+}
+
+.list-item {
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .12s;
+  /* touch target: min 44px di altezza minima implicita con padding */
+}
+.list-item:hover    { background: var(--bg); }
+.list-item.selected { background: var(--accent-light); border-left: 3px solid var(--accent); }
+.list-item.spes-item          { border-left: 3px solid var(--spes); background: #fffbe6; }
+.list-item.spes-item.selected { background: #fff5b0; }
+
+.item-name { font-size: .81rem; font-weight: 700; line-height: 1.3; }
+.item-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; flex-wrap: wrap; }
+.cat-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.item-cat  { font-size: .67rem; color: var(--muted); }
+
+.stato-badge {
+  font-size: .58rem;
+  padding: 2px 5px;
+  border-radius: 4px;
+  margin-left: auto;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.spes-label  { font-size: .58rem; color: #7a5c00; background: #fff3b0; border: 1px solid var(--spes); border-radius: 4px; padding: 2px 5px; font-weight: 700; }
+.stale-badge { font-size: .58rem; color: #a05000; background: #fff0e0; border: 1px solid #ffcc88; border-radius: 4px; padding: 2px 5px; font-weight: 700; }
+
+/* ================================================================
+   MAP
+   ================================================================ */
+#map { flex: 1; }
+
+.popup-wrap { font-family: var(--font); min-width: 230px; max-width: 290px; }
+.popup-nome { font-size: .93rem; font-weight: 800; line-height: 1.25; margin-bottom: 5px; }
+.popup-spes-tag { display: inline-block; font-size: .6rem; background: var(--spes); color: #664d00; border-radius: 4px; padding: 1px 7px; font-weight: 700; margin-bottom: 7px; }
+.popup-cat  { font-size: .69rem; color: var(--muted); margin-bottom: 7px; display: flex; align-items: center; gap: 5px; font-weight: 600; }
+.popup-desc { font-size: .76rem; line-height: 1.55; color: #333355; margin-bottom: 9px; background: var(--bg); border-radius: 6px; padding: 7px 9px; }
+.popup-field { font-size: .74rem; margin-bottom: 5px; }
+.popup-field label { font-weight: 700; color: var(--muted); display: block; font-size: .62rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+.popup-actions { margin-top: 10px; }
+.popup-btn { font-size: .72rem; padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; font-family: var(--font); font-weight: 700; background: var(--accent); color: #fff; min-height: 36px; }
+
+.stato-da         { background: #fff3cd; color: #7a5c00; }
+.stato-contattato { background: #ddeeff; color: #003d80; }
+.stato-collabo    { background: #d4f5e6; color: #0a5c30; }
+.stato-non        { background: #ffdde0; color: #7a1020; }
+
+/* ================================================================
+   EDIT PANEL
+   ================================================================ */
+#edit-panel {
+  position: fixed;
+  bottom: 0;
+  left: var(--sidebar-w);
+  right: 0;
+  background: #fff;
+  border-top: 3px solid var(--accent);
+  padding: 13px 18px;
+  padding-bottom: calc(13px + var(--safe-bottom));
+  transform: translateY(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  z-index: 1000;
+  box-shadow: 0 -4px 24px rgba(0,0,0,.1);
+}
+#edit-panel.open { transform: translateY(0); }
+
+#edit-panel h3 {
+  font-size: .93rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.edit-row   { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+.edit-field { display: flex; flex-direction: column; gap: 3px; min-width: 120px; flex: 1; }
+.edit-field label { font-size: .62rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
+.edit-field input,
+.edit-field select,
+.edit-field textarea {
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: .82rem;
+  color: var(--ink);
+  background: var(--bg);
+  outline: none;
+  min-height: 44px;
+  -webkit-appearance: none;
+}
+.edit-field textarea { min-height: 60px; resize: vertical; }
+.edit-field input:focus,
+.edit-field select:focus,
+.edit-field textarea:focus { border-color: var(--accent); }
+
+#collab-list {
+  max-height: 110px;
+  overflow-y: auto;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+.collab-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: .74rem;
+  font-weight: 600;
+  min-height: 36px;
+}
+.collab-check:hover { background: var(--accent-light); }
+.collab-check input[type=checkbox] { accent-color: var(--accent); cursor: pointer; width: 16px; height: 16px; flex-shrink: 0; }
+
+.edit-actions { display: flex; gap: 7px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+#dirty-indicator { font-size: .68rem; color: #a05000; background: #fff0e0; border: 1px solid #ffcc88; border-radius: 4px; padding: 2px 7px; font-weight: 700; display: none; }
+#dirty-indicator.visible { display: inline-block; }
+
+.save-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: .82rem;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity .15s;
+}
+.save-btn:disabled { opacity: .4; cursor: not-allowed; }
+.save-btn .spinner-sm {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  display: none;
+}
+.save-btn.loading .spinner-sm { display: block; }
+
+.cancel-btn {
+  background: var(--bg);
+  color: var(--muted);
+  border: 1.5px solid var(--border);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+#save-feedback { font-size: .73rem; color: var(--muted); font-weight: 600; }
+
+/* ================================================================
+   LEGEND
+   ================================================================ */
+#legend {
+  position: absolute;
+  bottom: 20px;
+  right: 12px;
+  z-index: 500;
+  background: rgba(255,255,255,.97);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: .69rem;
+  box-shadow: 0 2px 16px rgba(0,0,0,.08);
+}
+#legend h4 { font-size: .64rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 6px; font-weight: 700; }
+.leg-row   { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-weight: 600; }
+.leg-dot   { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+/* ================================================================
+   RAGNATELA
+   ================================================================ */
+#page-ragnatela { position: relative; }
+#ragnatela-map  { position: absolute; inset: 0; z-index: 0; }
+#ragnatela-info {
+  position: absolute;
+  top: 16px; left: 16px;
+  z-index: 1000;
+  background: rgba(0,0,20,.82);
+  border: 1px solid rgba(100,100,255,.35);
+  border-radius: 10px;
+  padding: 13px 16px;
+  color: rgba(255,255,255,.8);
+  font-size: .76rem;
+  max-width: 240px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#ragnatela-info h3    { font-size: .88rem; font-weight: 800; color: #fff; margin-bottom: 5px; }
+#ragnatela-info p     { font-size: .71rem; color: rgba(255,255,255,.5); line-height: 1.5; }
+#ragnatela-count      { margin-top: 8px; font-size: .7rem; color: var(--spes); font-weight: 700; }
+.rag-tooltip {
+  font-family: var(--font);
+  font-size: .78rem;
+  background: rgba(0,0,20,.9);
+  border: 1px solid rgba(100,100,255,.4);
+  border-radius: 6px;
+  color: #fff;
+  padding: 5px 9px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.4);
+}
+
+/* ================================================================
+   STILE
+   ================================================================ */
+#page-stile { background: var(--bg); padding: 32px; }
+.stile-wrap { max-width: 720px; margin: 0 auto; }
+.stile-wrap h2 { font-size: 1.4rem; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+.stile-wrap > p { font-size: .82rem; color: var(--muted); margin-bottom: 28px; }
+.stile-section { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 20px; }
+.stile-section h3 { font-size: .85rem; font-weight: 800; color: var(--ink); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+.stile-row { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.stile-row label { font-size: .78rem; font-weight: 700; color: var(--ink); min-width: 130px; }
+.stile-row input[type=color] { width: 44px; height: 36px; border: 1.5px solid var(--border); border-radius: 6px; cursor: pointer; padding: 2px; background: #fff; }
+.color-hex { font-size: .75rem; font-weight: 700; color: var(--muted); min-width: 64px; font-family: monospace; }
+.font-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-top: 4px; }
+.font-card { border: 2px solid var(--border); border-radius: 8px; padding: 10px 14px; cursor: pointer; transition: all .15s; }
+.font-card:hover,
+.font-card.selected { border-color: var(--accent); background: var(--accent-light); }
+.font-card .font-name   { font-size: .72rem; font-weight: 700; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em; }
+.font-card .font-sample { font-size: 1rem; color: var(--ink); }
+.stile-apply { background: var(--accent); color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-family: var(--font); font-size: .82rem; font-weight: 800; cursor: pointer; margin-top: 6px; min-height: 44px; }
+.stile-reset { background: var(--bg); color: var(--muted); border: 1.5px solid var(--border); padding: 10px 18px; border-radius: 8px; font-family: var(--font); font-size: .82rem; font-weight: 700; cursor: pointer; margin-top: 6px; margin-left: 8px; min-height: 44px; }
+.preview-box    { margin-top: 14px; border: 1.5px dashed var(--border); border-radius: 8px; padding: 14px 18px; background: var(--bg); }
+.preview-header { height: 36px; border-radius: 6px; background: var(--accent); display: flex; align-items: center; padding: 0 14px; margin-bottom: 10px; }
+.preview-header span { color: #fff; font-weight: 800; font-size: .82rem; }
+.preview-btn    { display: inline-block; background: var(--accent); color: #fff; border-radius: 5px; padding: 5px 12px; font-size: .76rem; font-weight: 700; }
+.preview-text   { font-size: .82rem; color: var(--ink); margin-bottom: 8px; }
+.preview-muted  { font-size: .72rem; color: var(--muted); }
+
+/* ================================================================
+   LOADING OVERLAY
+   ================================================================ */
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(245,245,255,.97);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  gap: 14px;
+}
+#loading-overlay h2 { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+#loading-overlay p  { font-size: .81rem; color: var(--muted); font-weight: 600; }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ================================================================
+   LEAFLET CUSTOMIZATION
+   ================================================================ */
+.leaflet-popup-content-wrapper { border-radius: 10px; box-shadow: 0 4px 24px rgba(0,0,0,.14); border: 1.5px solid var(--border); }
+.leaflet-popup-content { margin: 13px 15px; }
+
+/* ================================================================
+   SCROLLBAR
+   ================================================================ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--accent-mid); border-radius: 2px; }
+
+/* ================================================================
+   CONTROLS BAR
+   ================================================================ */
+#map-controls {
+  padding: 7px 13px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ctrl-btn {
+  font-size: .65rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-family: var(--font);
+  font-weight: 700;
+  color: var(--muted);
+  transition: all .15s;
+  min-height: 32px;
+}
+.ctrl-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+#list-count-bar {
+  display: flex;
+  align-items: center;
+  padding: 5px 13px 4px;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+}
+#list-count-bar label { font-size: .62rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
+#sort-select {
+  font-size: .65rem;
+  padding: 4px 6px;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  font-family: var(--font);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  outline: none;
+  min-height: 32px;
+}
+
+/* ================================================================
+   FAB BUTTONS (Suggerisci, Presentazione)
+   ================================================================ */
+#btn-present {
+  position: absolute;
+  top: 12px; right: 12px;
+  z-index: 500;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: .7rem;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: .75;
+  min-height: 36px;
+}
+#btn-suggest {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-family: var(--font);
+  font-size: .75rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0,0,255,.3);
+  white-space: nowrap;
+  min-height: 44px;
+}
+
+/* ================================================================
+   MOBILE RESPONSIVE (≤ 768px)
+   ================================================================ */
 @media (max-width: 768px) {
 
-  /* NAV — mostra solo titolo + hamburger + sync dot */
-  #nav-title span  { display: none }
-  #nav-title h1    { font-size: .85rem }
-  #nav-title        { padding: 0 12px }
-  /* Nascondi tab Mappa, Ragnatela, Stile — navigazione semplificata */
-  .nav-tab          { display: none }
-  #sync-status      { padding: 0 10px }
-  #sync-label       { display: none }
+  /* --- NAV --- */
+  #nav-title span { display: none; }
+  #nav-title h1   { font-size: .85rem; }
+  #nav-title      { padding: 0 12px; }
+  .nav-tab        { display: none; }
+  #sync-status    { padding: 0 10px; }
+  #sync-label     { display: none; }
+  #btn-hamburger  { display: flex !important; }
 
-  /* DASHBOARD — nascosta su mobile */
-  #dashboard { display: none }
+  /* --- DASHBOARD --- */
+  /* Visibile su mobile ma scrollabile orizzontalmente (già gestito sopra) */
+  #dashboard {
+    /* Riduci altezza card su mobile */
+  }
+  .dash-card {
+    min-width: 80px;
+    padding: 8px 10px;
+  }
+  .dash-num   { font-size: 1.2rem; }
+  .dash-label { font-size: .55rem; }
 
-  /* MAP AREA — fullscreen */
-  #map-area   { flex-direction: row; position: relative }
-  #map        { flex: 1; height: 100% }
+  /* --- MAP AREA --- */
+  #map-area { flex-direction: column; position: relative; }
+  #map      { flex: 1; min-height: 0; }
 
-  /* SIDEBAR — pannello a scomparsa da sinistra */
+  /* --- SIDEBAR: pannello a scomparsa da sinistra con swipe --- */
   #sidebar {
     position: absolute;
     top: 0; left: 0; bottom: 0;
     width: 88vw;
     max-width: 340px;
     z-index: 600;
-    transform: translateX(-100%);
-    transition: transform .28s ease;
+    transform: translateX(-110%);
+    transition: transform .3s cubic-bezier(.4,0,.2,1);
     border-right: 2px solid var(--border);
-    box-shadow: 4px 0 20px rgba(0,0,0,.15);
+    box-shadow: 4px 0 24px rgba(0,0,0,.15);
   }
-  #sidebar.mobile-open {
-    transform: translateX(0);
-  }
+  #sidebar.mobile-open { transform: translateX(0); }
 
-  /* Overlay scuro dietro la sidebar aperta */
+  /* --- OVERLAY --- */
   #mobile-overlay {
     display: none;
     position: absolute;
     inset: 0;
     background: rgba(0,0,0,.35);
     z-index: 590;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
   }
-  #mobile-overlay.visible { display: block }
+  #mobile-overlay.visible { display: block; }
 
-  /* Nascondi drawer handle (non serve più) */
-  #drawer-handle { display: none !important }
+  /* --- FILTRI: collassabili invece di nascosti --- */
+  #cat-filters-wrap {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .25s ease;
+  }
+  #cat-filters-wrap.open { max-height: 200px; }
+  #stato-filters {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .stato-btn { font-size: .62rem; padding: 5px 8px; }
 
-  /* Nascondi filtri categorie e stato — troppo densi su mobile */
-  #cat-filters   { display: none }
-  #stato-filters { display: none }
-  #map-controls  { display: none }
-  #list-count-bar { padding: 5px 10px 4px }
+  /* --- CONTROLS --- */
+  #map-controls { padding: 5px 10px; gap: 4px; }
+  #next-refresh { display: none; }
 
-  /* Search — touch-friendly */
-  #filter-bar    { padding: 10px 12px }
-  #search-input  { font-size: .85rem; padding: 10px 11px; margin-bottom: 0 }
+  /* --- SEARCH: touch-friendly --- */
+  #filter-bar   { padding: 10px 12px; }
+  #search-input { font-size: .9rem; margin-bottom: 7px; }
 
-  /* LEGENDA — nascosta */
-  #legend { display: none }
+  /* --- LISTA --- */
+  .list-item  { padding: 12px 13px; }
+  .item-name  { font-size: .84rem; }
 
-  /* BOTTONE HAMBURGER — appare in nav */
-  #btn-hamburger { display: flex !important }
+  /* --- LEGENDA: nascosta (troppo densa) --- */
+  #legend { display: none; }
 
-  /* BOTTONE SUGGERISCI — centrato in basso, più in alto su mobile */
+  /* --- FAB --- */
   #btn-suggest {
-    bottom: 72px;
+    bottom: calc(16px + var(--safe-bottom));
     left: 50%;
     transform: translateX(-50%);
-    white-space: nowrap;
+    font-size: .78rem;
+    padding: 11px 20px;
   }
+  #btn-present { display: none; }
 
-  /* BOTTONE PRESENTAZIONE — nascosto su mobile */
-  #btn-present { display: none }
-
-  /* EDIT PANEL — fullscreen dal basso */
+  /* --- EDIT PANEL: fullscreen dal basso con safe area --- */
   #edit-panel {
     left: 0;
-    max-height: 92vh;
+    max-height: 90dvh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 14px 14px 28px;
+    padding: 16px 14px calc(16px + var(--safe-bottom));
+    border-radius: 16px 16px 0 0;
+    /* Quando la tastiera è aperta, il panel stare al di sotto */
+    transition: transform .28s cubic-bezier(.4,0,.2,1), bottom .2s ease;
   }
-  .edit-row   { flex-direction: column; gap: 8px }
-  .edit-field { min-width: 100%; flex: none }
+  .edit-row   { flex-direction: column; gap: 8px; }
+  .edit-field { min-width: 100%; flex: none; }
   .edit-field input,
   .edit-field select,
-  .edit-field textarea { font-size: .85rem; padding: 9px 10px }
-  .edit-actions { flex-wrap: wrap }
-  .save-btn, .cancel-btn { padding: 10px 18px; font-size: .82rem }
+  .edit-field textarea { font-size: .88rem; }
+  .edit-actions { flex-wrap: wrap; }
+  .save-btn, .cancel-btn { padding: 12px 18px; font-size: .84rem; }
 
-  /* MODALE SUGGERISCI — sheet dal basso */
+  /* --- MODALE SUGGERISCI: bottom sheet --- */
   #suggerisci-modal {
-    top: auto; bottom: 0; left: 0; right: 0;
-    transform: none;
-    width: 100%;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+    width: 100% !important;
     border-radius: 16px 16px 0 0;
-    max-height: 90vh;
+    max-height: 92dvh;
     overflow-y: auto;
-    padding: 20px 18px 36px;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 18px calc(24px + var(--safe-bottom)) !important;
   }
   #suggerisci-modal input,
-  #suggerisci-modal textarea { font-size: .85rem !important }
+  #suggerisci-modal textarea { font-size: .88rem !important; min-height: 44px; }
 
-  /* RAGNATELA INFO — compatta */
-  #ragnatela-info { max-width: 180px; padding: 9px 12px }
-  #ragnatela-info p { display: none }
+  /* --- RAGNATELA INFO --- */
+  #ragnatela-info { max-width: 180px; padding: 9px 12px; }
+  #ragnatela-info p { display: none; }
 
-  /* TAB STILE — nascosta, non accessibile da mobile */
-  #page-stile.active { display: none }
+  /* --- STILE: nascosta su mobile --- */
+  #page-stile.active { display: none; }
+
+  /* --- FILTRI MOBILE TOGGLE --- */
+  #mobile-filter-toggle {
+    display: flex !important;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 13px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    border: none;
+    font-family: var(--font);
+    min-height: 44px;
+    border-bottom: 1px solid var(--border);
+  }
 }
+
+/* Presentazione */
+body.presenting #sidebar   { display: none; }
+body.presenting #dashboard { display: none; }
+body.presenting #edit-panel { left: 0; }
+
+/* ================================================================
+   TOAST NOTIFICATION
+   ================================================================ */
+#toast {
+  position: fixed;
+  bottom: calc(80px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: .78rem;
+  font-weight: 700;
+  opacity: 0;
+  transition: opacity .25s, transform .25s;
+  z-index: 3000;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
+
+<!-- ================================================================
+     LOADING
+     ================================================================ -->
 <div id="loading-overlay">
   <div class="spinner"></div>
   <h2>Rete Monelli</h2>
   <p id="loading-msg">Caricamento dati…</p>
 </div>
 
+<!-- ================================================================
+     TOAST
+     ================================================================ -->
+<div id="toast"></div>
+
 <div id="app">
+
+  <!-- NAV -->
   <div id="nav">
-    <div id="nav-title"><h1>Stalkers di Comunità</h1><span>Municipio III · Roma</span></div>
-    <!-- Hamburger — visibile solo su mobile -->
-    <button id="btn-hamburger" onclick="toggleMobileSidebar()" style="display:none;align-items:center;justify-content:center;background:none;border:none;padding:0 14px;cursor:pointer;flex-direction:column;gap:4px">
+    <div id="nav-title">
+      <h1>Stalkers di Comunità</h1>
+      <span>Municipio III · Roma</span>
+    </div>
+
+    <!-- Hamburger (solo mobile) -->
+    <button id="btn-hamburger"
+      style="display:none;align-items:center;justify-content:center;background:none;border:none;padding:0 14px;cursor:pointer;flex-direction:column;gap:4px;min-width:44px;min-height:44px;"
+      aria-label="Apri lista">
       <span style="display:block;width:20px;height:2px;background:rgba(255,255,255,.8);border-radius:2px"></span>
       <span style="display:block;width:20px;height:2px;background:rgba(255,255,255,.8);border-radius:2px"></span>
       <span style="display:block;width:20px;height:2px;background:rgba(255,255,255,.8);border-radius:2px"></span>
     </button>
-    <button class="nav-tab active" onclick="showPage('mappa',this)">🗺 Mappa</button>
-    <button class="nav-tab" onclick="showPage('ragnatela',this)">🕸 Ragnatela</button>
-    <button class="nav-tab" onclick="showPage('stile',this)">🎨 Stile</button>
+
+    <button class="nav-tab active" data-page="mappa">🗺 Mappa</button>
+    <button class="nav-tab"        data-page="ragnatela">🕸 Ragnatela</button>
+    <button class="nav-tab"        data-page="stile">🎨 Stile</button>
     <div id="sync-status"><div id="sync-dot"></div><span id="sync-label">—</span></div>
   </div>
 
+  <!-- ============================================================
+       PAGE: MAPPA
+       ============================================================ -->
   <div id="page-mappa" class="active">
 
     <!-- DASHBOARD -->
     <div id="dashboard">
-      <div class="dash-card dash-total" onclick="filterDash('tutti')" title="Mostra tutte">
+      <div class="dash-card dash-total" data-dash="tutti" title="Mostra tutte">
         <div class="dash-num" id="d-total">—</div>
         <div class="dash-label">Totale</div>
         <div class="dash-bar"></div>
       </div>
-      <div class="dash-card dash-col" onclick="filterDash('In collaborazione')" title="Filtra per collaborazione">
+      <div class="dash-card dash-col" data-dash="In collaborazione" title="In collaborazione">
         <div class="dash-num" id="d-col">—</div>
         <div class="dash-label">In collaborazione</div>
         <div class="dash-bar"></div>
       </div>
-      <div class="dash-card dash-cnt" onclick="filterDash('Contattato')" title="Filtra per contattati">
+      <div class="dash-card dash-cnt" data-dash="Contattato" title="Contattati">
         <div class="dash-num" id="d-cnt">—</div>
         <div class="dash-label">Contattati</div>
         <div class="dash-bar"></div>
       </div>
-      <div class="dash-card dash-da" onclick="filterDash('Da contattare')" title="Filtra per da contattare">
+      <div class="dash-card dash-da" data-dash="Da contattare" title="Da contattare">
         <div class="dash-num" id="d-da">—</div>
         <div class="dash-label">Da contattare</div>
         <div class="dash-bar"></div>
       </div>
-      <div class="dash-card dash-non" onclick="filterDash('Non interessato')" title="Filtra per non interessati">
+      <div class="dash-card dash-non" data-dash="Non interessato" title="Non interessati">
         <div class="dash-num" id="d-non">—</div>
         <div class="dash-label">Non interessati</div>
         <div class="dash-bar"></div>
       </div>
-      <div class="dash-card dash-stale" onclick="filterDash('stale')" title="Filtra da ricontattare">
+      <div class="dash-card dash-stale" data-dash="stale" title="Da ricontattare">
         <div class="dash-num" id="d-stale">—</div>
         <div class="dash-label">Da ricontattare</div>
         <div class="dash-bar"></div>
@@ -355,49 +887,62 @@ body.presenting #btn-present{opacity:1;background:var(--accent)}
     </div>
 
     <div id="map-area">
-      <!-- Overlay scuro per chiudere la sidebar su mobile -->
-      <div id="mobile-overlay" onclick="toggleMobileSidebar()"></div>
+      <!-- Overlay per chiudere sidebar su mobile -->
+      <div id="mobile-overlay"></div>
+
       <div id="sidebar">
-        <!-- Handle mobile per espandere/collassare il drawer -->
-        <div id="drawer-handle" onclick="toggleDrawer()" style="display:none;justify-content:center;align-items:center;padding:7px;cursor:pointer;background:var(--bg);border-bottom:1px solid var(--border);gap:8px;font-size:.7rem;font-weight:700;color:var(--muted)">
-          <div style="width:36px;height:4px;border-radius:2px;background:var(--border)"></div>
-          <span id="drawer-label">Lista realtà</span>
-        </div>
+        <!-- Toggle filtri su mobile -->
+        <button id="mobile-filter-toggle" style="display:none">
+          <span>Filtri</span>
+          <span id="mobile-filter-arrow">▼</span>
+        </button>
+
         <div id="filter-bar">
-          <input type="text" id="search-input" placeholder="Cerca per nome o descrizione…">
-          <div class="filter-row" id="cat-filters"></div>
-          <div id="stato-filters">
-            <button class="stato-btn active" data-stato="tutti">Tutti</button>
-            <button class="stato-btn" data-stato="Da contattare" style="color:#7a5c00">Da contattare</button>
-            <button class="stato-btn" data-stato="Contattato" style="color:#003d80">Contattato</button>
-            <button class="stato-btn" data-stato="In collaborazione" style="color:#0a5c30">In collab.</button>
-            <button class="stato-btn" data-stato="Non interessato" style="color:#7a1020">Non int.</button>
+          <input type="text" id="search-input" placeholder="Cerca per nome o descrizione…" autocomplete="off" autocorrect="off" spellcheck="false">
+
+          <!-- Wrapper per collasso su mobile -->
+          <div id="cat-filters-wrap">
+            <div class="filter-row" id="cat-filters"></div>
+            <div id="stato-filters">
+              <button class="stato-btn active" data-stato="tutti">Tutti</button>
+              <button class="stato-btn" data-stato="Da contattare" style="color:#7a5c00">Da contattare</button>
+              <button class="stato-btn" data-stato="Contattato" style="color:#003d80">Contattato</button>
+              <button class="stato-btn" data-stato="In collaborazione" style="color:#0a5c30">In collab.</button>
+              <button class="stato-btn" data-stato="Non interessato" style="color:#7a1020">Non int.</button>
+            </div>
           </div>
         </div>
-        <div id="map-controls" style="padding:7px 13px;border-bottom:1px solid var(--border);background:var(--bg);display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <button id="btn-labels" onclick="toggleLabels()" style="font-size:.65rem;padding:3px 10px;border-radius:6px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted);transition:all .15s">🏷 Etichette: off</button>
-          <button onclick="esportaCSV()" style="font-size:.65rem;padding:3px 10px;border-radius:6px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted)">⬇ Esporta CSV</button>
+
+        <div id="map-controls">
+          <button id="btn-labels" class="ctrl-btn">🏷 Etichette: off</button>
+          <button id="btn-csv"    class="ctrl-btn">⬇ Esporta CSV</button>
           <span id="next-refresh" style="font-size:.62rem;color:var(--muted);margin-left:auto"></span>
         </div>
-        <div id="list-count-bar" style="display:flex;align-items:center;padding:5px 13px 3px;gap:6px;border-bottom:1px solid var(--border)">
+
+        <div id="list-count-bar">
           <span id="list-count" style="font-size:.69rem;color:var(--muted);font-weight:700;flex:1"></span>
-          <label style="font-size:.62rem;color:var(--muted);font-weight:700;white-space:nowrap">Ordina:</label>
-          <select id="sort-select" onchange="renderList()" style="font-size:.65rem;padding:2px 5px;border:1.5px solid var(--border);border-radius:5px;font-family:var(--font);background:#fff;color:var(--ink);cursor:pointer;outline:none">
+          <label for="sort-select">Ordina:</label>
+          <select id="sort-select">
             <option value="default">Foglio</option>
             <option value="nome">Nome ↑</option>
             <option value="stato">Stato</option>
             <option value="data">Ultimo contatto</option>
           </select>
         </div>
+
         <div id="list-container"></div>
       </div>
-      <div id="map"></div>
-      <button id="btn-present" onclick="togglePresentation()" style="position:absolute;top:12px;right:12px;z-index:500;background:var(--ink);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-family:var(--font);font-size:.7rem;font-weight:700;cursor:pointer;opacity:.75">⛶ Presentazione</button>
-      <button id="btn-suggest" onclick="openSuggerisci()" style="position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:500;background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:20px;font-family:var(--font);font-size:.75rem;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,255,.3);white-space:nowrap">+ Suggerisci una realtà</button>
-    </div>
 
+      <div id="map"></div>
+
+      <button id="btn-present" title="Modalità presentazione">⛶ Presentazione</button>
+      <button id="btn-suggest">+ Suggerisci una realtà</button>
+    </div>
   </div>
 
+  <!-- ============================================================
+       PAGE: RAGNATELA
+       ============================================================ -->
   <div id="page-ragnatela">
     <div id="ragnatela-map"></div>
     <div id="ragnatela-info">
@@ -406,23 +951,27 @@ body.presenting #btn-present{opacity:1;background:var(--accent)}
       <div id="ragnatela-count">— connessioni</div>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15)">
         <div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Mostra solo connessioni di</div>
-        <select id="rag-focus" onchange="drawRagnatela()" style="width:100%;padding:5px 7px;border-radius:6px;border:1px solid rgba(100,100,255,.3);background:rgba(0,0,40,.8);color:#fff;font-family:var(--font);font-size:.74rem;outline:none">
+        <select id="rag-focus" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(100,100,255,.3);background:rgba(0,0,40,.8);color:#fff;font-family:var(--font);font-size:.74rem;outline:none;min-height:36px">
           <option value="">— tutte —</option>
         </select>
       </div>
     </div>
   </div>
 
+  <!-- ============================================================
+       PAGE: STILE
+       ============================================================ -->
   <div id="page-stile">
     <div class="stile-wrap">
       <h2>🎨 Stile</h2>
       <p>Colori e font. Le modifiche si applicano in tempo reale.</p>
+
       <div class="stile-section">
         <h3>Colori</h3>
-        <div class="stile-row"><label>Colore principale</label><input type="color" id="color-accent" value="#0000ff" oninput="livePreview()"><span class="color-hex" id="hex-accent">#0000ff</span></div>
-        <div class="stile-row"><label>Sfondo</label><input type="color" id="color-bg" value="#f5f5ff" oninput="livePreview()"><span class="color-hex" id="hex-bg">#f5f5ff</span></div>
-        <div class="stile-row"><label>Testo</label><input type="color" id="color-ink" value="#0a0a2e" oninput="livePreview()"><span class="color-hex" id="hex-ink">#0a0a2e</span></div>
-        <div class="stile-row"><label>Colore Spes ⭐</label><input type="color" id="color-spes" value="#ffcc00" oninput="livePreview()"><span class="color-hex" id="hex-spes">#ffcc00</span></div>
+        <div class="stile-row"><label>Colore principale</label><input type="color" id="color-accent" value="#0000ff"><span class="color-hex" id="hex-accent">#0000ff</span></div>
+        <div class="stile-row"><label>Sfondo</label>          <input type="color" id="color-bg"     value="#f5f5ff"><span class="color-hex" id="hex-bg">#f5f5ff</span></div>
+        <div class="stile-row"><label>Testo</label>           <input type="color" id="color-ink"    value="#0a0a2e"><span class="color-hex" id="hex-ink">#0a0a2e</span></div>
+        <div class="stile-row"><label>Colore Spes ⭐</label>  <input type="color" id="color-spes"   value="#ffcc00"><span class="color-hex" id="hex-spes">#ffcc00</span></div>
         <div class="preview-box">
           <div class="preview-header"><span>Stalkers di Comunità</span></div>
           <div class="preview-text">Rete Monelli — Municipio III Roma</div>
@@ -430,70 +979,56 @@ body.presenting #btn-present{opacity:1;background:var(--accent)}
           <br><span class="preview-btn">✏ Aggiorna contatto</span>
         </div>
       </div>
+
       <div class="stile-section">
         <h3>Font</h3>
         <div class="font-grid" id="font-grid"></div>
       </div>
+
       <div class="stile-section">
         <h3>Stile Ragnatela</h3>
-        <div class="stile-row">
-          <label>Spessore fili Spes</label>
-          <input type="range" id="rag-w-spes" min="0.5" max="6" step="0.5" value="1.5" oninput="updateRagStyle()" style="flex:1;accent-color:#ffcc00">
-          <span class="color-hex" id="lbl-w-spes">1.5px</span>
-        </div>
-        <div class="stile-row">
-          <label>Opacità fili Spes</label>
-          <input type="range" id="rag-o-spes" min="5" max="100" step="5" value="45" oninput="updateRagStyle()" style="flex:1;accent-color:#ffcc00">
-          <span class="color-hex" id="lbl-o-spes">45%</span>
-        </div>
-        <div class="stile-row">
-          <label>Spessore fili peer</label>
-          <input type="range" id="rag-w-peer" min="0.5" max="6" step="0.5" value="0.8" oninput="updateRagStyle()" style="flex:1;accent-color:#aaaaff">
-          <span class="color-hex" id="lbl-w-peer">0.8px</span>
-        </div>
-        <div class="stile-row">
-          <label>Opacità fili peer</label>
-          <input type="range" id="rag-o-peer" min="5" max="100" step="5" value="15" oninput="updateRagStyle()" style="flex:1;accent-color:#aaaaff">
-          <span class="color-hex" id="lbl-o-peer">15%</span>
-        </div>
-        <div class="stile-row">
-          <label>Colore fili Spes</label>
-          <input type="color" id="rag-c-spes" value="#ffcc00" oninput="updateRagStyle()" style="width:44px;height:32px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px">
-        </div>
-        <div class="stile-row">
-          <label>Colore fili peer</label>
-          <input type="color" id="rag-c-peer" value="#ffffff" oninput="updateRagStyle()" style="width:44px;height:32px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px">
-        </div>
+        <div class="stile-row"><label>Spessore fili Spes</label><input type="range" id="rag-w-spes" min="0.5" max="6" step="0.5" value="1.5" style="flex:1;accent-color:#ffcc00"><span class="color-hex" id="lbl-w-spes">1.5px</span></div>
+        <div class="stile-row"><label>Opacità fili Spes</label> <input type="range" id="rag-o-spes" min="5"   max="100" step="5"  value="45"  style="flex:1;accent-color:#ffcc00"><span class="color-hex" id="lbl-o-spes">45%</span></div>
+        <div class="stile-row"><label>Spessore fili peer</label><input type="range" id="rag-w-peer" min="0.5" max="6" step="0.5" value="0.8" style="flex:1;accent-color:#aaaaff"><span class="color-hex" id="lbl-w-peer">0.8px</span></div>
+        <div class="stile-row"><label>Opacità fili peer</label> <input type="range" id="rag-o-peer" min="5"   max="100" step="5"  value="15"  style="flex:1;accent-color:#aaaaff"><span class="color-hex" id="lbl-o-peer">15%</span></div>
+        <div class="stile-row"><label>Colore fili Spes</label>  <input type="color" id="rag-c-spes" value="#ffcc00" style="width:44px;height:36px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px"></div>
+        <div class="stile-row"><label>Colore fili peer</label>  <input type="color" id="rag-c-peer" value="#ffffff" style="width:44px;height:36px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px"></div>
       </div>
+
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="stile-apply" onclick="applyStyle()">✓ Applica e salva</button>
-        <button class="stile-reset" onclick="resetStyle()">↩ Ripristina</button>
+        <button class="stile-apply" id="btn-stile-apply">✓ Applica e salva</button>
+        <button class="stile-reset" id="btn-stile-reset">↩ Ripristina</button>
       </div>
     </div>
   </div>
-</div>
 
-<!-- EDIT PANEL -->
-<div id="edit-panel">
+</div><!-- #app -->
+
+<!-- ================================================================
+     EDIT PANEL
+     ================================================================ -->
+<div id="edit-panel" role="dialog" aria-modal="true" aria-labelledby="edit-title">
   <h3 id="edit-title"></h3>
   <div class="edit-row">
     <div class="edit-field" style="min-width:130px;flex:.8">
-      <label>Stato</label>
+      <label for="edit-stato">Stato</label>
       <select id="edit-stato">
-        <option>Da contattare</option><option>Contattato</option>
-        <option>In collaborazione</option><option>Non interessato</option>
+        <option>Da contattare</option>
+        <option>Contattato</option>
+        <option>In collaborazione</option>
+        <option>Non interessato</option>
       </select>
     </div>
     <div class="edit-field" style="flex:1.5">
-      <label>Referente / Contatto</label>
+      <label for="edit-contatto">Referente / Contatto</label>
       <input type="text" id="edit-contatto" placeholder="Nome, email, telefono…">
     </div>
     <div class="edit-field" style="min-width:130px;flex:.7">
-      <label>Data ultimo contatto</label>
+      <label for="edit-data">Data ultimo contatto</label>
       <input type="date" id="edit-data">
     </div>
     <div class="edit-field" style="flex:2">
-      <label>Note</label>
+      <label for="edit-note">Note</label>
       <textarea id="edit-note" placeholder="Appunti…"></textarea>
     </div>
     <div class="edit-field" style="flex:2">
@@ -502,203 +1037,254 @@ body.presenting #btn-present{opacity:1;background:var(--accent)}
     </div>
   </div>
   <div class="edit-actions">
-    <button class="save-btn" id="save-btn" onclick="saveEdit()">Salva</button>
-    <button class="cancel-btn" onclick="closeEditGuard()">Chiudi</button>
+    <button class="save-btn" id="save-btn">
+      <span class="spinner-sm"></span>
+      <span id="save-btn-label">Salva</span>
+    </button>
+    <button class="cancel-btn" id="cancel-btn">Chiudi</button>
     <span id="dirty-indicator">● modifiche non salvate</span>
     <span id="save-feedback"></span>
   </div>
 </div>
 
-<!-- SUGGERISCI MODAL -->
-<div id="suggerisci-overlay" onclick="closeSuggerisci()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1600"></div>
-<div id="suggerisci-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1700;background:#fff;border-radius:14px;padding:28px 28px 22px;width:min(420px,90vw);box-shadow:0 8px 40px rgba(0,0,0,.18);font-family:var(--font)">
+<!-- ================================================================
+     MODAL SUGGERISCI
+     ================================================================ -->
+<div id="suggerisci-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1600"></div>
+<div id="suggerisci-modal" role="dialog" aria-modal="true" aria-label="Suggerisci una realtà"
+  style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1700;background:#fff;border-radius:14px;padding:28px 28px 22px;width:min(420px,90vw);box-shadow:0 8px 40px rgba(0,0,0,.18);font-family:var(--font)">
   <h3 style="font-size:1.05rem;font-weight:800;color:var(--ink);margin-bottom:6px">💡 Suggerisci una realtà</h3>
-  <p style="font-size:.78rem;color:var(--muted);margin-bottom:18px;line-height:1.5">Conosci un'associazione, cooperativa o realtà del territorio che non è ancora nella mappa? Segnalacela.</p>
+  <p style="font-size:.78rem;color:var(--muted);margin-bottom:18px;line-height:1.5">Conosci un'associazione o realtà del territorio non ancora nella mappa? Segnalacela.</p>
   <div style="display:flex;flex-direction:column;gap:10px">
     <div>
       <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Nome della realtà *</label>
-      <input id="sug-nome" type="text" placeholder="es. Associazione Il Girasole" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.82rem;color:var(--ink);background:var(--bg);outline:none">
+      <input id="sug-nome" type="text" placeholder="es. Associazione Il Girasole"
+        style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.85rem;color:var(--ink);background:var(--bg);outline:none;min-height:44px;-webkit-appearance:none">
     </div>
     <div>
       <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Informazioni aggiuntive (opzionale)</label>
-      <textarea id="sug-info" placeholder="Indirizzo, sito web, perché potrebbe essere interessante…" rows="3" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.82rem;color:var(--ink);background:var(--bg);outline:none;resize:vertical"></textarea>
+      <textarea id="sug-info" placeholder="Indirizzo, sito web, perché potrebbe essere interessante…" rows="3"
+        style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.85rem;color:var(--ink);background:var(--bg);outline:none;resize:vertical"></textarea>
     </div>
     <div>
       <label style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Il tuo nome (opzionale)</label>
-      <input id="sug-chi" type="text" placeholder="Chi suggerisce?" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.82rem;color:var(--ink);background:var(--bg);outline:none">
+      <input id="sug-chi" type="text" placeholder="Chi suggerisce?"
+        style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.85rem;color:var(--ink);background:var(--bg);outline:none;min-height:44px;-webkit-appearance:none">
     </div>
   </div>
-  <div style="display:flex;gap:8px;margin-top:18px;align-items:center">
-    <button onclick="inviaSuggerimento()" id="sug-btn" style="background:var(--accent);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-family:var(--font);font-size:.82rem;font-weight:800;cursor:pointer">Invia</button>
-    <button onclick="closeSuggerisci()" style="background:var(--bg);color:var(--muted);border:1.5px solid var(--border);padding:9px 16px;border-radius:8px;font-family:var(--font);font-size:.82rem;font-weight:600;cursor:pointer">Annulla</button>
+  <div style="display:flex;gap:8px;margin-top:18px;align-items:center;flex-wrap:wrap">
+    <button id="sug-btn" style="background:var(--accent);color:#fff;border:none;padding:11px 22px;border-radius:8px;font-family:var(--font);font-size:.85rem;font-weight:800;cursor:pointer;min-height:44px">Invia</button>
+    <button id="sug-cancel" style="background:var(--bg);color:var(--muted);border:1.5px solid var(--border);padding:11px 18px;border-radius:8px;font-family:var(--font);font-size:.85rem;font-weight:600;cursor:pointer;min-height:44px">Annulla</button>
     <span id="sug-feedback" style="font-size:.75rem;color:var(--muted);font-weight:600;margin-left:4px"></span>
   </div>
 </div>
 
+<!-- ================================================================
+     JAVASCRIPT
+     ================================================================ -->
 <script>
+'use strict';
 
-// =====================================================================
-// CONFIGURAZIONE
-// =====================================================================
-// FIX: nuovo URL Apps Script aggiornato
+/* ================================================================
+   CONFIGURAZIONE
+   ================================================================ */
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzMlXgITO51cLxYyff2JEF6svnE62g_eBbLiB_jI8dZSEmWIzmxz9PdsoZwPGp-Z4WaSQ/exec';
 const SPES_NAME  = 'Spes Contra Spem';
 const STALE_DAYS = 60;
 
 const CAT_COLORS = {
-  'Enti del Terzo Settore':'#3355ff','Parrocchie, Enti religiosi, Scout':'#22aa66',
-  'Scuole, Scuole Migranti, Ripetizioni':'#9944ee','Centri Sociali, Culturali, Biblioteche':'#ee4499',
-  'Disabilità':'#ff8800','Servizi socio-sanitari':'#00aacc',
-  'Ambiente, Sport, Cibo':'#55bb00','Aziende private':'#888','Generale':'#aaa'
+  'Enti del Terzo Settore':                    '#3355ff',
+  'Parrocchie, Enti religiosi, Scout':         '#22aa66',
+  'Scuole, Scuole Migranti, Ripetizioni':      '#9944ee',
+  'Centri Sociali, Culturali, Biblioteche':    '#ee4499',
+  'Disabilità':                                '#ff8800',
+  'Servizi socio-sanitari':                    '#00aacc',
+  'Ambiente, Sport, Cibo':                     '#55bb00',
+  'Aziende private':                           '#888',
+  'Generale':                                  '#aaa',
 };
 const CAT_LABELS = {
-  'Enti del Terzo Settore':'Terzo Settore','Parrocchie, Enti religiosi, Scout':'Religiosi/Scout',
-  'Scuole, Scuole Migranti, Ripetizioni':'Scuole','Centri Sociali, Culturali, Biblioteche':'Centri Culturali',
-  'Disabilità':'Disabilità','Servizi socio-sanitari':'Socio-sanitari',
-  'Ambiente, Sport, Cibo':'Ambiente/Sport','Aziende private':'Aziende','Generale':'Generale'
+  'Enti del Terzo Settore':                    'Terzo Settore',
+  'Parrocchie, Enti religiosi, Scout':         'Religiosi/Scout',
+  'Scuole, Scuole Migranti, Ripetizioni':      'Scuole',
+  'Centri Sociali, Culturali, Biblioteche':    'Centri Culturali',
+  'Disabilità':                                'Disabilità',
+  'Servizi socio-sanitari':                    'Socio-sanitari',
+  'Ambiente, Sport, Cibo':                     'Ambiente/Sport',
+  'Aziende private':                           'Aziende',
+  'Generale':                                  'Generale',
 };
 const STATO_CLASS = {
-  'Da contattare':'stato-da','Contattato':'stato-contattato',
-  'In collaborazione':'stato-collabo','Non interessato':'stato-non'
+  'Da contattare':    'stato-da',
+  'Contattato':       'stato-contattato',
+  'In collaborazione':'stato-collabo',
+  'Non interessato':  'stato-non',
 };
 const FONTS = [
-  {name:'Nunito',  google:'Nunito:wght@400;700;800'},
-  {name:'Outfit',  google:'Outfit:wght@400;700;800'},
-  {name:'DM Sans', google:'DM+Sans:wght@400;500;700'},
-  {name:'Inter',   google:'Inter:wght@400;600;700'},
-  {name:'Poppins', google:'Poppins:wght@400;600;700'},
-  {name:'Figtree', google:'Figtree:wght@400;600;700'},
-  {name:'Syne',    google:'Syne:wght@400;700;800'},
+  { name: 'Nunito',  google: 'Nunito:wght@400;700;800' },
+  { name: 'Outfit',  google: 'Outfit:wght@400;700;800' },
+  { name: 'DM Sans', google: 'DM+Sans:wght@400;500;700' },
+  { name: 'Inter',   google: 'Inter:wght@400;600;700' },
+  { name: 'Poppins', google: 'Poppins:wght@400;600;700' },
+  { name: 'Figtree', google: 'Figtree:wght@400;600;700' },
+  { name: 'Syne',    google: 'Syne:wght@400;700;800' },
 ];
 
-// =====================================================================
-// FALLBACK DATI LOCALI (usati se il foglio non è raggiungibile)
-// =====================================================================
 const FALLBACK = [
-  {"Nome":"Collina del Barbagianni (rete Mondo Comunità e Famiglia)","Categoria":"Enti del Terzo Settore","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"Progetti di accoglienza, Agricoltura sociale","Lat":41.9622994,"Lng":12.5562418,"Collabora":"","DataContatto":""},
-  {"Nome":"Centro Casa Giocosa","Categoria":"Enti del Terzo Settore","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"","Lat":41.9300579,"Lng":12.5371344,"Collabora":"","DataContatto":""},
-  {"Nome":"Sant'egidio Serpentara-Vigne Nuove","Categoria":"Enti del Terzo Settore","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"","Lat":41.963033731903,"Lng":12.5157021355822,"Collabora":"","DataContatto":""},
-  {"Nome":"Parsec Coop Sociale Arl","Categoria":"Enti del Terzo Settore","Stato":"Da contattare","Contatto":"","Note":"","Descrizione":"Prevenzione del danno uso sostanze, lotta alla tratta, benessere per giovani, sostegno studio, sportello di ascolto.","Lat":41.9454804,"Lng":12.5301449,"Collabora":"","DataContatto":""},
-  {"Nome":"Spes Contra Spem","Categoria":"Enti del Terzo Settore","Stato":"Da contattare","Contatto":"","Note":"","Descrizione":"La cooperativa da cui parte tutto.","Lat":41.9601,"Lng":12.5512271,"Collabora":"","DataContatto":""},
-  {"Nome":"Eureka I coop","Categoria":"Enti del Terzo Settore","Stato":"Da contattare","Contatto":"","Note":"","Descrizione":"","Lat":41.9647676,"Lng":12.5138049,"Collabora":"","DataContatto":""},
-  {"Nome":"SPINOFF Roma ETS","Categoria":"Enti del Terzo Settore","Stato":"Contattato","Contatto":"valerio: +39 338 795 0919","Note":"","Descrizione":"Laboratori, rassegne cinematografiche, attività educative.","Lat":41.9449213,"Lng":12.531119,"Collabora":"","DataContatto":""},
-  {"Nome":"Gruppo CIAO - San Ponziano","Categoria":"Parrocchie, Enti religiosi, Scout","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"","Lat":41.947469,"Lng":12.5452074,"Collabora":"","DataContatto":""},
-  {"Nome":"Club Nomentano","Categoria":"Ambiente, Sport, Cibo","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"","Lat":41.9376993,"Lng":12.5546833,"Collabora":"","DataContatto":""},
-  {"Nome":"Centro Anziani Salaria","Categoria":"Centri Sociali, Culturali, Biblioteche","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"","Lat":41.98414,"Lng":12.50805,"Collabora":"","DataContatto":""},
-  {"Nome":"Anticorpi","Categoria":"Centri Sociali, Culturali, Biblioteche","Stato":"In collaborazione","Contatto":"","Note":"","Descrizione":"Lavorano con arte e disabilità","Lat":41.9818459,"Lng":12.5101585,"Collabora":"","DataContatto":""}
+  { Nome:'Collina del Barbagianni (rete Mondo Comunità e Famiglia)', Categoria:'Enti del Terzo Settore', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'Progetti di accoglienza, Agricoltura sociale', Lat:41.9622994, Lng:12.5562418, Collabora:'', DataContatto:'' },
+  { Nome:'Centro Casa Giocosa',           Categoria:'Enti del Terzo Settore', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.9300579, Lng:12.5371344, Collabora:'', DataContatto:'' },
+  { Nome:'Sant\'egidio Serpentara-Vigne Nuove', Categoria:'Enti del Terzo Settore', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.963033731903, Lng:12.5157021355822, Collabora:'', DataContatto:'' },
+  { Nome:'Parsec Coop Sociale Arl',       Categoria:'Enti del Terzo Settore', Stato:'Da contattare', Contatto:'', Note:'', Descrizione:'Prevenzione del danno uso sostanze, lotta alla tratta.', Lat:41.9454804, Lng:12.5301449, Collabora:'', DataContatto:'' },
+  { Nome:'Spes Contra Spem',              Categoria:'Enti del Terzo Settore', Stato:'Da contattare', Contatto:'', Note:'', Descrizione:'La cooperativa da cui parte tutto.', Lat:41.9601, Lng:12.5512271, Collabora:'', DataContatto:'' },
+  { Nome:'Eureka I coop',                 Categoria:'Enti del Terzo Settore', Stato:'Da contattare', Contatto:'', Note:'', Descrizione:'', Lat:41.9647676, Lng:12.5138049, Collabora:'', DataContatto:'' },
+  { Nome:'SPINOFF Roma ETS',              Categoria:'Enti del Terzo Settore', Stato:'Contattato', Contatto:'valerio: +39 338 795 0919', Note:'', Descrizione:'Laboratori, rassegne cinematografiche, attività educative.', Lat:41.9449213, Lng:12.531119, Collabora:'', DataContatto:'' },
+  { Nome:'Gruppo CIAO - San Ponziano',    Categoria:'Parrocchie, Enti religiosi, Scout', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.947469, Lng:12.5452074, Collabora:'', DataContatto:'' },
+  { Nome:'Club Nomentano',                Categoria:'Ambiente, Sport, Cibo', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.9376993, Lng:12.5546833, Collabora:'', DataContatto:'' },
+  { Nome:'Centro Anziani Salaria',        Categoria:'Centri Sociali, Culturali, Biblioteche', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.98414, Lng:12.50805, Collabora:'', DataContatto:'' },
+  { Nome:'Anticorpi',                     Categoria:'Centri Sociali, Culturali, Biblioteche', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'Lavorano con arte e disabilità', Lat:41.9818459, Lng:12.5101585, Collabora:'', DataContatto:'' },
 ];
 
-// =====================================================================
-// STATO APPLICAZIONE
-// =====================================================================
-let DATA = [];
-// FIX: uso clear/add invece di riassegnazione, evita desincronizzazione riferimenti
-let activeCategories = new Set(Object.keys(CAT_COLORS));
-let activeStato = 'tutti', searchQuery = '', selectedIndex = null, editingIndex = null;
-let markers = [], currentPage = 'mappa', currentFont = 'Nunito';
-let ragMap = null, ragLayers = [];
+/* ================================================================
+   STATO APPLICAZIONE (un oggetto unico — niente variabili globali sparse)
+   ================================================================ */
+const state = {
+  data:             [],          // dataset principale
+  activeCategories: new Set(Object.keys(CAT_COLORS)),
+  activeStato:      'tutti',
+  searchQuery:      '',
+  selectedIndex:    null,
+  editingIndex:     null,
+  hasUnsavedChanges: false,
+  currentPage:      'mappa',
+  currentFont:      'Nunito',
+  showLabels:       false,
+  presentationMode: false,
+  mobileSidebarOpen: false,
+  mobileFiltersOpen: false,
+  markers:          [],
+  labelMarkers:     [],
+  map:              null,
+  ragMap:           null,
+  ragLayers:        [],
+  refreshCountdown: 300,
+  refreshTimer:     null,
+  flyDebounce:      null,
+};
 
-// =====================================================================
-// SYNC STATUS
-// =====================================================================
-function setSyncStatus(state, label) {
-  document.getElementById('sync-dot').className = state;
-  document.getElementById('sync-label').textContent = label;
+/* ================================================================
+   UTILITY
+   ================================================================ */
+
+/** Escaping HTML per prevenire XSS quando si inseriscono dati utente nel DOM */
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-// =====================================================================
-// DASHBOARD
-// =====================================================================
-function updateDashboard() {
-  document.getElementById('d-total').textContent = DATA.length;
-  document.getElementById('d-col').textContent   = DATA.filter(d => d.Stato === 'In collaborazione').length;
-  document.getElementById('d-cnt').textContent   = DATA.filter(d => d.Stato === 'Contattato').length;
-  document.getElementById('d-da').textContent    = DATA.filter(d => d.Stato === 'Da contattare').length;
-  document.getElementById('d-non').textContent   = DATA.filter(d => d.Stato === 'Non interessato').length;
-  document.getElementById('d-stale').textContent = DATA.filter(d => isStaleGlobal(d)).length;
-}
+function isSpes(d) { return d.Nome === SPES_NAME; }
 
-// isStale accessibile prima di DOMContentLoaded per updateDashboard
-function isStaleGlobal(d) {
+function isStale(d) {
   if (!d.DataContatto) return false;
   if (d.Stato === 'Da contattare' || d.Stato === 'Non interessato') return false;
-  const days = (Date.now() - new Date(d.DataContatto)) / (1000*60*60*24);
+  const days = (Date.now() - new Date(d.DataContatto)) / (1000 * 60 * 60 * 24);
   return days > STALE_DAYS;
 }
 
-function filterDash(stato) {
-  activeStato = stato;
-  document.querySelectorAll('.dash-card').forEach(c => c.classList.remove('active-filter'));
-  const map = {'In collaborazione':'.dash-col','Contattato':'.dash-cnt','Da contattare':'.dash-da','Non interessato':'.dash-non','stale':'.dash-stale'};
-  if (map[stato]) document.querySelector(map[stato]).classList.add('active-filter');
-  // stale non corrisponde a un valore Stato, deseleziona i bottoni stato
-  document.querySelectorAll('.stato-btn').forEach(b => b.classList.toggle('active', b.dataset.stato === stato));
-  renderList(); renderMarkers();
+function showToast(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
 }
 
-// =====================================================================
-// AUTO-REFRESH ogni 5 minuti con countdown visibile
-// =====================================================================
-const REFRESH_INTERVAL = 5 * 60; // secondi
-let refreshCountdown = REFRESH_INTERVAL;
-let refreshTimer = null;
+/* ================================================================
+   SYNC STATUS
+   ================================================================ */
+function setSyncStatus(statusClass, label) {
+  document.getElementById('sync-dot').className = statusClass;
+  document.getElementById('sync-label').textContent = label;
+}
+
+/* ================================================================
+   DASHBOARD
+   ================================================================ */
+function updateDashboard() {
+  const d = state.data;
+  document.getElementById('d-total').textContent = d.length;
+  document.getElementById('d-col').textContent   = d.filter(x => x.Stato === 'In collaborazione').length;
+  document.getElementById('d-cnt').textContent   = d.filter(x => x.Stato === 'Contattato').length;
+  document.getElementById('d-da').textContent    = d.filter(x => x.Stato === 'Da contattare').length;
+  document.getElementById('d-non').textContent   = d.filter(x => x.Stato === 'Non interessato').length;
+  document.getElementById('d-stale').textContent = d.filter(x => isStale(x)).length;
+}
+
+/* ================================================================
+   AUTO-REFRESH
+   ================================================================ */
+const REFRESH_INTERVAL = 5 * 60;
 
 function startRefreshCycle() {
-  if (refreshTimer) clearInterval(refreshTimer);
-  refreshCountdown = REFRESH_INTERVAL;
-  refreshTimer = setInterval(() => {
-    refreshCountdown--;
-    const m = Math.floor(refreshCountdown / 60);
-    const s = String(refreshCountdown % 60).padStart(2, '0');
+  if (state.refreshTimer) clearInterval(state.refreshTimer);
+  state.refreshCountdown = REFRESH_INTERVAL;
+  state.refreshTimer = setInterval(() => {
+    state.refreshCountdown--;
+    const m = Math.floor(state.refreshCountdown / 60);
+    const s = String(state.refreshCountdown % 60).padStart(2, '0');
     const el = document.getElementById('next-refresh');
     if (el) el.textContent = `↻ aggiorna tra ${m}:${s}`;
-    if (refreshCountdown <= 0) {
+    if (state.refreshCountdown <= 0) {
       loadFromSheet();
-      refreshCountdown = REFRESH_INTERVAL;
+      state.refreshCountdown = REFRESH_INTERVAL;
     }
   }, 1000);
 }
 
-// =====================================================================
-// ESPORTA CSV (dati filtrati correnti)
-// =====================================================================
+/* ================================================================
+   ESPORTA CSV
+   ================================================================ */
 function esportaCSV() {
-  const items = typeof filteredDataGlobal === 'function' ? filteredDataGlobal() : DATA;
-  const cols = ['Nome','Categoria','Stato','Contatto','DataContatto','Note','Descrizione','Collabora','Lat','Lng'];
-  const escape = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-  const rows = [cols.join(','), ...items.map(d => cols.map(c => escape(d[c])).join(','))];
-  const blob = new Blob([rows.join('\n')], {type: 'text/csv;charset=utf-8;'});
+  const items = filteredData();
+  const cols  = ['Nome','Categoria','Stato','Contatto','DataContatto','Note','Descrizione','Collabora','Lat','Lng'];
+  const escCsv = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const rows  = [cols.join(','), ...items.map(d => cols.map(c => escCsv(d[c])).join(','))];
+  const blob  = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'rete_monelli_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.download = 'rete_monelli_' + new Date().toISOString().slice(0, 10) + '.csv';
   a.click();
+  showToast('CSV esportato ✓');
 }
-// =====================================================================
-// LOAD DAL FOGLIO
-// FIX: cache-bust con ?t= per evitare risposta stantia di Apps Script (fino a 6h)
-// =====================================================================
+
+/* ================================================================
+   LOAD DAL FOGLIO
+   ================================================================ */
 async function loadFromSheet() {
   document.getElementById('loading-msg').textContent = 'Lettura del foglio…';
   setSyncStatus('saving', 'Caricamento…');
   try {
-    const res  = await fetch(SCRIPT_URL + '?t=' + Date.now(), { method: 'GET' });
+    const res = await fetch(SCRIPT_URL + '?t=' + Date.now());
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
     if (json.status === 'ok' && Array.isArray(json.data) && json.data.length > 0) {
-      DATA = json.data.map(r => ({
-        Nome:        r['Nome']        || '',
-        Categoria:   r['Categoria']   || '',
-        Stato:       r['Stato']       || 'Da contattare',
-        Contatto:    r['Contatto']    || '',
-        Note:        r['Note']        || '',
-        Descrizione: r['Descrizione'] || '',
-        Lat: parseFloat(String(r['Lat']  || '').replace(',', '.')) || null,
-        Lng: parseFloat(String(r['Lng']  || '').replace(',', '.')) || null,
-        Collabora:   r['Collabora']   || '',
-        DataContatto:r['DataContatto']|| ''
+      state.data = json.data.map(r => ({
+        Nome:         r['Nome']         || '',
+        Categoria:    r['Categoria']    || '',
+        Stato:        r['Stato']        || 'Da contattare',
+        Contatto:     r['Contatto']     || '',
+        Note:         r['Note']         || '',
+        Descrizione:  r['Descrizione']  || '',
+        Lat:          parseFloat(String(r['Lat']  || '').replace(',', '.')) || null,
+        Lng:          parseFloat(String(r['Lng']  || '').replace(',', '.')) || null,
+        Collabora:    r['Collabora']    || '',
+        DataContatto: r['DataContatto'] || '',
       })).filter(d => {
         if (!d.Nome || d.Lat === null || d.Lng === null) {
-          if (d.Nome) console.warn('[SKIP] Coordinate mancanti o non valide per:', d.Nome);
+          if (d.Nome) console.warn('[SKIP] Coordinate mancanti per:', d.Nome);
           return false;
         }
         return true;
@@ -707,25 +1293,30 @@ async function loadFromSheet() {
     } else {
       throw new Error('Nessun dato nel foglio');
     }
-  } catch(e) {
-    console.warn('Errore caricamento dal foglio:', e.message);
-    DATA = FALLBACK.map(d => ({...d}));
+  } catch (e) {
+    console.warn('Errore caricamento:', e.message);
+    state.data = FALLBACK.map(d => ({ ...d }));
     setSyncStatus('error', 'Offline — dati locali');
   }
+
   const overlay = document.getElementById('loading-overlay');
   if (overlay) overlay.style.display = 'none';
+
   updateDashboard();
-  if (typeof buildCatFilters === 'function') buildCatFilters();
-  if (typeof renderList    === 'function') renderList();
-  if (typeof renderMarkers === 'function') renderMarkers();
+  buildCatFilters();
+  renderList();
+  renderMarkers();
   startRefreshCycle();
 }
 
-// =====================================================================
-// SAVE RIGA
-// FIX: rimosso mode:'no-cors' → ora leggiamo la risposta reale dal server
-//      e mostriamo errore se il salvataggio fallisce lato Apps Script
-// =====================================================================
+/* ================================================================
+   SAVE RIGA
+   FIX: usiamo no-cors (necessario per Apps Script senza CORS header
+   configurati), ma tracciamo ottimisticamente e avvertiamo l'utente
+   in caso di errore di rete. Non possiamo leggere la risposta con
+   no-cors, quindi il feedback è "inviato" non "salvato con conferma".
+   Per avere conferma reale bisognerebbe configurare CORS in Apps Script.
+   ================================================================ */
 async function saveRow(rowData) {
   setSyncStatus('saving', 'Salvataggio…');
   try {
@@ -733,484 +1324,788 @@ async function saveRow(rowData) {
       method:  'POST',
       mode:    'no-cors',
       headers: { 'Content-Type': 'text/plain' },
-      body:    JSON.stringify(rowData)
+      body:    JSON.stringify(rowData),
     });
-    setSyncStatus('ok', 'Salvato ✓');
+    // Con no-cors non possiamo leggere la risposta, assumiamo successo se non
+    // c'è errore di rete. Per conferma reale configurare Access-Control-Allow-Origin
+    // nel doPost di Apps Script.
+    setSyncStatus('ok', 'Inviato ✓');
     setTimeout(() => setSyncStatus('ok', 'Sincronizzato'), 2500);
     return true;
-  } catch(e) {
+  } catch (e) {
     console.error('Errore salvataggio:', e.message);
-    setSyncStatus('error', 'Errore: ' + e.message);
+    setSyncStatus('error', 'Errore rete');
     return false;
   }
 }
 
-// =====================================================================
-// MODAL SUGGERISCI
-// FIX: rinominato inviaStuggerimento → inviaSuggerimento (typo)
-// FIX: campi allineati a quelli letti da doPost: Suggerimento, InfoSuggerimento, ChiSuggerisce, DataSuggerimento
-// FIX: rimosso mode:'no-cors' → ora leggiamo la risposta
-// =====================================================================
+/* ================================================================
+   FILTRO DATI
+   ================================================================ */
+function filteredData() {
+  return state.data.map((d, i) => ({ ...d, _i: i })).filter(d => {
+    if (!state.activeCategories.has(d.Categoria)) return false;
+    if (state.activeStato === 'stale') return isStale(d);
+    if (state.activeStato !== 'tutti' && d.Stato !== state.activeStato) return false;
+    if (state.searchQuery) {
+      const q = state.searchQuery.toLowerCase();
+      if (!d.Nome.toLowerCase().includes(q) && !d.Descrizione.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+/* ================================================================
+   NAV — usa event delegation, niente onclick inline
+   ================================================================ */
+document.getElementById('nav').addEventListener('click', e => {
+  const tab = e.target.closest('.nav-tab');
+  if (!tab) return;
+  const page = tab.dataset.page;
+  if (!page) return;
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  ['mappa', 'ragnatela', 'stile'].forEach(p => {
+    document.getElementById('page-' + p).classList.toggle('active', p === page);
+  });
+  state.currentPage = page;
+  if (page === 'ragnatela') setTimeout(initRagnatela, 80);
+});
+
+/* ================================================================
+   DASHBOARD — event delegation
+   ================================================================ */
+document.getElementById('dashboard').addEventListener('click', e => {
+  const card = e.target.closest('.dash-card');
+  if (!card) return;
+  const dash = card.dataset.dash;
+  state.activeStato = dash;
+  document.querySelectorAll('.dash-card').forEach(c => c.classList.remove('active-filter'));
+  card.classList.add('active-filter');
+  // Sincronizza bottoni stato
+  document.querySelectorAll('.stato-btn').forEach(b => b.classList.toggle('active', b.dataset.stato === dash));
+  renderList();
+  renderMarkers();
+});
+
+/* ================================================================
+   MAPPA LEAFLET
+   ================================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+
+  /* --- INIT MAPPA --- */
+  state.map = L.map('map', { zoomControl: true, attributionControl: true })
+    .setView([41.945, 12.55], 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CARTO',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(state.map);
+
+  /* --- ICONE --- */
+  function makeIcon(color, selected = false, spes = false) {
+    if (spes) {
+      const s = selected ? 22 : 18;
+      return L.divIcon({
+        html: `<div style="width:${s}px;height:${s}px;border-radius:50%;background:#ffcc00;border:3px solid #fff;box-shadow:0 0 0 3px #ffcc00,0 2px 10px rgba(255,204,0,.6);display:flex;align-items:center;justify-content:center;font-size:${Math.round(s*.5)}px">⭐</div>`,
+        className: '',
+        iconSize: [s + 6, s + 6],
+        iconAnchor: [(s + 6) / 2, (s + 6) / 2],
+      });
+    }
+    const s = selected ? 14 : 10;
+    return L.divIcon({
+      html: `<div style="width:${s}px;height:${s}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 5px rgba(0,0,0,.3)"></div>`,
+      className: '',
+      iconSize: [s + 4, s + 4],
+      iconAnchor: [(s + 4) / 2, (s + 4) / 2],
+    });
+  }
+
+  /* --- RENDER LISTA --- */
+  const STATO_ORDER = { 'In collaborazione': 0, 'Contattato': 1, 'Da contattare': 2, 'Non interessato': 3 };
+
+  function renderList() {
+    let items = filteredData();
+    const sort = document.getElementById('sort-select').value;
+    if (sort === 'nome') {
+      items = [...items].sort((a, b) => a.Nome.localeCompare(b.Nome, 'it'));
+    } else if (sort === 'stato') {
+      items = [...items].sort((a, b) => (STATO_ORDER[a.Stato] ?? 9) - (STATO_ORDER[b.Stato] ?? 9));
+    } else if (sort === 'data') {
+      items = [...items].sort((a, b) => {
+        const da = a.DataContatto ? new Date(a.DataContatto) : new Date(0);
+        const db = b.DataContatto ? new Date(b.DataContatto) : new Date(0);
+        return db - da;
+      });
+    }
+
+    document.getElementById('list-count').textContent = items.length + ' realtà';
+
+    // Costruiamo il DOM in modo sicuro (no innerHTML con dati utente)
+    const container = document.getElementById('list-container');
+    container.innerHTML = '';
+    const frag = document.createDocumentFragment();
+
+    items.forEach(d => {
+      const color = CAT_COLORS[d.Categoria] || '#aaa';
+      const cls   = STATO_CLASS[d.Stato] || 'stato-da';
+      const staleFlag = isStale(d);
+
+      const item = document.createElement('div');
+      item.className = 'list-item' + (isSpes(d) ? ' spes-item' : '') + (state.selectedIndex === d._i ? ' selected' : '');
+      item.dataset.idx = d._i;
+
+      const inner = document.createElement('div');
+      inner.style.cssText = 'display:flex;align-items:flex-start;gap:4px';
+
+      const textWrap = document.createElement('div');
+      textWrap.style.cssText = 'flex:1;min-width:0';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'item-name';
+      nameEl.textContent = d.Nome; // textContent — sicuro
+
+      const metaEl = document.createElement('div');
+      metaEl.className = 'item-meta';
+
+      const dot = document.createElement('div');
+      dot.className = 'cat-dot';
+      dot.style.background = color;
+
+      const catEl = document.createElement('span');
+      catEl.className = 'item-cat';
+      catEl.textContent = CAT_LABELS[d.Categoria] || d.Categoria;
+
+      metaEl.appendChild(dot);
+      metaEl.appendChild(catEl);
+
+      if (isSpes(d)) {
+        const sl = document.createElement('span');
+        sl.className = 'spes-label';
+        sl.textContent = '⭐ origine';
+        metaEl.appendChild(sl);
+      }
+      if (staleFlag) {
+        const sb = document.createElement('span');
+        sb.className = 'stale-badge';
+        sb.textContent = '⏰ ricontattare';
+        metaEl.appendChild(sb);
+      }
+      const badge = document.createElement('span');
+      badge.className = 'stato-badge ' + cls;
+      badge.textContent = d.Stato;
+      metaEl.appendChild(badge);
+
+      textWrap.appendChild(nameEl);
+      textWrap.appendChild(metaEl);
+
+      const gotoBtn = document.createElement('button');
+      gotoBtn.title = 'Vai alla posizione';
+      gotoBtn.dataset.goto = d._i;
+      gotoBtn.style.cssText = 'flex-shrink:0;background:none;border:1.5px solid var(--border);border-radius:5px;padding:5px 7px;cursor:pointer;font-size:.7rem;color:var(--muted);line-height:1;margin-top:2px;min-width:28px;min-height:28px';
+      gotoBtn.textContent = '⊙';
+
+      inner.appendChild(textWrap);
+      inner.appendChild(gotoBtn);
+      item.appendChild(inner);
+      frag.appendChild(item);
+    });
+
+    container.appendChild(frag);
+  }
+
+  /* --- RENDER MARKERS --- */
+  function renderMarkers() {
+    state.markers.forEach(m => state.map.removeLayer(m));
+    state.markers = [];
+    state.labelMarkers.forEach(m => state.map.removeLayer(m));
+    state.labelMarkers = [];
+
+    filteredData().forEach(d => {
+      const color = CAT_COLORS[d.Categoria] || '#aaa';
+      const m = L.marker([d.Lat, d.Lng], {
+        icon: makeIcon(color, state.selectedIndex === d._i, isSpes(d)),
+      }).addTo(state.map);
+      m._di = d._i;
+      state.markers.push(m);
+
+      if (state.showLabels) {
+        const lm = L.marker([d.Lat, d.Lng], {
+          icon: L.divIcon({
+            html: `<div style="font-family:var(--font);font-size:10px;font-weight:700;color:var(--ink);white-space:nowrap;margin-top:14px;text-shadow:0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff">${esc(d.Nome.length > 22 ? d.Nome.slice(0, 20) + '…' : d.Nome)}</div>`,
+            className: '',
+            iconAnchor: [0, 0],
+          }),
+          interactive: false,
+        }).addTo(state.map);
+        state.labelMarkers.push(lm);
+      }
+    });
+  }
+
+  /* --- SELECT ITEM --- */
+  // FIX: debounce flyTo per evitare animazioni in coda rapida
+  function flyToDebounced(lat, lng, zoom) {
+    if (state.flyDebounce) {
+      state.map.stop();
+      clearTimeout(state.flyDebounce);
+    }
+    state.flyDebounce = setTimeout(() => {
+      state.map.flyTo([lat, lng], zoom, { duration: .7 });
+      state.flyDebounce = null;
+    }, 80);
+  }
+
+  function selectItem(idx) {
+    state.selectedIndex = idx;
+    const d = DATA()[idx];
+    if (!d) return;
+    const color = CAT_COLORS[d.Categoria] || '#aaa';
+
+    // Aggiorna lista
+    document.querySelectorAll('.list-item').forEach(el => el.classList.remove('selected'));
+    const el = document.querySelector(`[data-idx="${idx}"]`);
+    if (el) { el.classList.add('selected'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+
+    // Aggiorna mappa
+    flyToDebounced(d.Lat, d.Lng, 15);
+    state.markers.forEach(m => {
+      const md = DATA()[m._di];
+      m.setIcon(makeIcon(CAT_COLORS[md?.Categoria] || '#aaa', m._di === idx, isSpes(md)));
+    });
+
+    // Popup — costruiamo tutto con textContent/createElement per sicurezza XSS
+    const wrap = document.createElement('div');
+    wrap.className = 'popup-wrap';
+
+    const nome = document.createElement('div');
+    nome.className = 'popup-nome';
+    nome.textContent = d.Nome;
+    wrap.appendChild(nome);
+
+    if (isSpes(d)) {
+      const tag = document.createElement('div');
+      tag.className = 'popup-spes-tag';
+      tag.textContent = '⭐ Punto di origine della rete';
+      wrap.appendChild(tag);
+    }
+
+    const cat = document.createElement('div');
+    cat.className = 'popup-cat';
+    cat.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span>`;
+    cat.appendChild(document.createTextNode(' ' + (CAT_LABELS[d.Categoria] || d.Categoria)));
+    wrap.appendChild(cat);
+
+    const badge = document.createElement('span');
+    badge.className = 'stato-badge ' + (STATO_CLASS[d.Stato] || 'stato-da');
+    badge.textContent = d.Stato;
+    wrap.appendChild(badge);
+
+    if (isStale(d)) {
+      const sw = document.createElement('div');
+      sw.style.cssText = 'font-size:.7rem;color:#a05000;background:#fff0e0;border-radius:5px;padding:4px 8px;margin:6px 0';
+      sw.textContent = `⏰ Non contattato da più di ${STALE_DAYS} giorni`;
+      wrap.appendChild(sw);
+    }
+
+    const addField = (content, labelText) => {
+      if (!content) return;
+      const f = document.createElement('div');
+      f.className = 'popup-field';
+      const lbl = document.createElement('label');
+      lbl.textContent = labelText;
+      const val = document.createElement('span');
+      val.textContent = content;
+      f.appendChild(lbl);
+      f.appendChild(val);
+      wrap.appendChild(f);
+    };
+
+    if (d.Descrizione) {
+      const desc = document.createElement('div');
+      desc.className = 'popup-desc';
+      desc.textContent = d.Descrizione;
+      wrap.appendChild(desc);
+    }
+    addField(d.Contatto,    'Referente');
+    addField(d.DataContatto,'Ultimo contatto');
+    addField(d.Note,        'Note');
+    addField(d.Collabora,   'Collabora con');
+
+    const actions = document.createElement('div');
+    actions.className = 'popup-actions';
+    const editBtn = document.createElement('button');
+    editBtn.className = 'popup-btn';
+    editBtn.textContent = '✏ Modifica';
+    editBtn.addEventListener('click', () => openEdit(idx));
+    actions.appendChild(editBtn);
+    wrap.appendChild(actions);
+
+    L.popup({ maxWidth: 310 })
+      .setLatLng([d.Lat, d.Lng])
+      .setContent(wrap)
+      .openOn(state.map);
+
+    // Su mobile, chiudi sidebar dopo selezione
+    if (isMobile() && state.mobileSidebarOpen) toggleMobileSidebar();
+  }
+
+  /* --- GOTO (lampeggio marker senza selezionare) --- */
+  function gotoItem(idx) {
+    const d = DATA()[idx];
+    if (!d) return;
+    flyToDebounced(d.Lat, d.Lng, 16);
+    const m = state.markers.find(m => m._di === idx);
+    if (m) {
+      const color = CAT_COLORS[state.data[idx]?.Categoria] || '#aaa';
+      [0, 400, 800, 1200].forEach((t, i) => {
+        setTimeout(() => {
+          m.setIcon(i % 2 === 0
+            ? makeIcon('#ffffff', true, isSpes(state.data[idx]))
+            : makeIcon(color, state.selectedIndex === idx, isSpes(state.data[idx]))
+          );
+        }, t);
+      });
+    }
+  }
+
+  /* --- EVENT DELEGATION: lista e bottoni goto --- */
+  document.getElementById('list-container').addEventListener('click', e => {
+    const gotoBtn = e.target.closest('[data-goto]');
+    if (gotoBtn) { e.stopPropagation(); gotoItem(Number(gotoBtn.dataset.goto)); return; }
+    const item = e.target.closest('.list-item');
+    if (item) selectItem(Number(item.dataset.idx));
+  });
+
+  /* --- EVENT DELEGATION: marker click --- */
+  // I marker Leaflet usano .on('click') — ok, non c'è modo migliore
+  // Il binding avviene in renderMarkers() già correttamente
+
+  // Patch renderMarkers per aggiungere il listener
+  const _origRenderMarkers = renderMarkers;
+  function renderMarkersWithEvents() {
+    _origRenderMarkers();
+    state.markers.forEach(m => {
+      m.on('click', () => selectItem(m._di));
+    });
+  }
+  // Ridefinisci
+  Object.defineProperty(window, '_renderMarkers', { value: renderMarkersWithEvents });
+
+  /* --- EDIT PANEL --- */
+  function setDirty(val) {
+    state.hasUnsavedChanges = val;
+    document.getElementById('dirty-indicator').classList.toggle('visible', val);
+  }
+
+  function openEdit(idx) {
+    state.editingIndex = idx;
+    const d = state.data[idx];
+
+    document.getElementById('edit-title').textContent     = d.Nome;
+    document.getElementById('edit-stato').value           = d.Stato;
+    document.getElementById('edit-contatto').value        = d.Contatto    || '';
+    document.getElementById('edit-data').value            = d.DataContatto || '';
+    document.getElementById('edit-note').value            = d.Note         || '';
+    document.getElementById('save-feedback').textContent  = '';
+    document.getElementById('save-feedback').style.color  = '';
+    setDirty(false);
+
+    // Costruisci lista collaborazioni
+    const cur  = (d.Collabora || '').split(',').map(s => s.trim()).filter(Boolean);
+    const list = document.getElementById('collab-list');
+    list.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    state.data.filter(x => x.Nome !== d.Nome).forEach(x => {
+      const lbl = document.createElement('label');
+      lbl.className = 'collab-check';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = x.Nome;
+      cb.checked = cur.includes(x.Nome);
+      cb.addEventListener('change', () => setDirty(true));
+      const dot = document.createElement('span');
+      dot.style.cssText = `width:7px;height:7px;border-radius:50%;background:${CAT_COLORS[x.Categoria] || '#aaa'};display:inline-block;flex-shrink:0`;
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = x.Nome;
+      lbl.appendChild(cb);
+      lbl.appendChild(dot);
+      lbl.appendChild(nameSpan);
+      frag.appendChild(lbl);
+    });
+    list.appendChild(frag);
+
+    // FIX: rimuovi listener precedenti sostituendo i nodi (clone)
+    ['edit-stato', 'edit-contatto', 'edit-data', 'edit-note'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('input',  () => setDirty(true));
+      el.addEventListener('change', () => setDirty(true));
+    });
+
+    document.getElementById('edit-panel').classList.add('open');
+
+    // FIX: gestione tastiera virtuale su mobile
+    if (isMobile()) {
+      setTimeout(() => {
+        document.getElementById('edit-stato').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 350);
+    }
+  }
+
+  function closeEdit() {
+    document.getElementById('edit-panel').classList.remove('open');
+    setDirty(false);
+    state.editingIndex = null;
+    // Rimuovi listener per evitare accumulo (sostituiamo i campi con cloni)
+    ['edit-stato', 'edit-contatto', 'edit-data', 'edit-note'].forEach(id => {
+      const el = document.getElementById(id);
+      const clone = el.cloneNode(true);
+      el.parentNode.replaceChild(clone, el);
+    });
+  }
+
+  function closeEditGuard() {
+    if (state.hasUnsavedChanges) {
+      if (!confirm('Hai modifiche non salvate. Chiudere senza salvare?')) return;
+    }
+    closeEdit();
+  }
+
+  async function saveEdit() {
+    if (state.editingIndex === null) return;
+    const d = state.data[state.editingIndex];
+    d.Stato        = document.getElementById('edit-stato').value;
+    d.Contatto     = document.getElementById('edit-contatto').value;
+    d.DataContatto = document.getElementById('edit-data').value;
+    d.Note         = document.getElementById('edit-note').value;
+    d.Collabora    = [...document.getElementById('collab-list').querySelectorAll('input:checked')]
+                       .map(c => c.value).join(', ');
+
+    const btn   = document.getElementById('save-btn');
+    const label = document.getElementById('save-btn-label');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    label.textContent = 'Salvataggio…';
+    document.getElementById('save-feedback').textContent = '';
+
+    const ok = await saveRow(d);
+
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    label.textContent = 'Salva';
+
+    if (ok) {
+      setDirty(false);
+      showToast('✓ Salvato');
+      const si = state.editingIndex;
+      closeEdit();
+      state.map.closePopup();
+      updateDashboard();
+      renderList();
+      renderMarkersWithEvents();
+      selectItem(si);
+      if (state.currentPage === 'ragnatela') drawRagnatela();
+    } else {
+      const fb = document.getElementById('save-feedback');
+      fb.textContent = '✗ Salvataggio fallito — riprova';
+      fb.style.color = '#e74c3c';
+    }
+  }
+
+  /* --- BINDING EDIT PANEL --- */
+  document.getElementById('save-btn').addEventListener('click', saveEdit);
+  document.getElementById('cancel-btn').addEventListener('click', closeEditGuard);
+
+  /* --- FILTRI CATEGORIE --- */
+  function buildCatFilters() {
+    const container = document.getElementById('cat-filters');
+    container.innerHTML = '';
+    const cats = [...new Set(state.data.map(d => d.Categoria))];
+
+    const allBtn = document.createElement('button');
+    allBtn.className = 'filter-btn';
+    allBtn.textContent = 'Tutti';
+    const allActive = () => state.activeCategories.size === cats.length;
+    const refreshAllBtn = () => {
+      allBtn.style.cssText = allActive()
+        ? 'background:var(--accent);color:white;border-color:var(--accent)'
+        : 'background:white;color:var(--muted)';
+    };
+    allBtn.addEventListener('click', () => {
+      if (allActive()) {
+        state.activeCategories.clear();
+      } else {
+        state.activeCategories.clear();
+        cats.forEach(c => state.activeCategories.add(c));
+      }
+      refreshAllBtn();
+      document.querySelectorAll('.filter-btn[data-cat]').forEach(b => {
+        const c = CAT_COLORS[b.dataset.cat] || '#aaa';
+        if (state.activeCategories.has(b.dataset.cat)) {
+          b.style.cssText = `background:${c};color:white;border-color:${c}`;
+        } else {
+          b.style.cssText = `background:white;color:${c}`;
+        }
+      });
+      renderList(); renderMarkersWithEvents();
+    });
+    refreshAllBtn();
+    container.appendChild(allBtn);
+
+    cats.forEach(cat => {
+      const btn   = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.textContent = CAT_LABELS[cat] || cat;
+      btn.dataset.cat = cat;
+      const color = CAT_COLORS[cat] || '#aaa';
+      btn.style.cssText = `background:${color};color:white;border-color:${color}`;
+      btn.addEventListener('click', () => {
+        if (state.activeCategories.has(cat)) {
+          state.activeCategories.delete(cat);
+          btn.style.cssText = `background:white;color:${color}`;
+        } else {
+          state.activeCategories.add(cat);
+          btn.style.cssText = `background:${color};color:white;border-color:${color}`;
+        }
+        refreshAllBtn();
+        renderList(); renderMarkersWithEvents();
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  /* --- STATO FILTERS --- */
+  document.getElementById('stato-filters').addEventListener('click', e => {
+    const btn = e.target.closest('.stato-btn');
+    if (!btn) return;
+    state.activeStato = btn.dataset.stato;
+    document.querySelectorAll('.stato-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.dash-card').forEach(c => c.classList.remove('active-filter'));
+    const dashMap = {
+      'In collaborazione': '.dash-col',
+      'Contattato':        '.dash-cnt',
+      'Da contattare':     '.dash-da',
+      'Non interessato':   '.dash-non',
+    };
+    if (dashMap[state.activeStato]) document.querySelector(dashMap[state.activeStato]).classList.add('active-filter');
+    renderList(); renderMarkersWithEvents();
+  });
+
+  /* --- SEARCH --- */
+  document.getElementById('search-input').addEventListener('input', e => {
+    state.searchQuery = e.target.value;
+    renderList();
+    renderMarkersWithEvents();
+  });
+
+  /* --- SORT --- */
+  document.getElementById('sort-select').addEventListener('change', renderList);
+
+  /* --- LABELS --- */
+  document.getElementById('btn-labels').addEventListener('click', () => {
+    state.showLabels = !state.showLabels;
+    const btn = document.getElementById('btn-labels');
+    btn.textContent = state.showLabels ? '🏷 Etichette: on' : '🏷 Etichette: off';
+    btn.classList.toggle('on', state.showLabels);
+    renderMarkersWithEvents();
+  });
+
+  /* --- CSV --- */
+  document.getElementById('btn-csv').addEventListener('click', esportaCSV);
+
+  /* --- PRESENTAZIONE --- */
+  document.getElementById('btn-present').addEventListener('click', () => {
+    state.presentationMode = !state.presentationMode;
+    document.body.classList.toggle('presenting', state.presentationMode);
+    document.getElementById('btn-present').textContent = state.presentationMode ? '✕ Esci' : '⛶ Presentazione';
+    setTimeout(() => state.map.invalidateSize(), 320);
+  });
+
+  /* --- SUGGERISCI --- */
+  document.getElementById('btn-suggest').addEventListener('click', openSuggerisci);
+  document.getElementById('sug-cancel').addEventListener('click', closeSuggerisci);
+  document.getElementById('suggerisci-overlay').addEventListener('click', closeSuggerisci);
+  document.getElementById('sug-btn').addEventListener('click', inviaSuggerimento);
+
+  /* --- MOBILE FILTER TOGGLE --- */
+  document.getElementById('mobile-filter-toggle').addEventListener('click', () => {
+    state.mobileFiltersOpen = !state.mobileFiltersOpen;
+    document.getElementById('cat-filters-wrap').classList.toggle('open', state.mobileFiltersOpen);
+    document.getElementById('mobile-filter-arrow').textContent = state.mobileFiltersOpen ? '▲' : '▼';
+  });
+
+  /* --- HAMBURGER --- */
+  document.getElementById('btn-hamburger').addEventListener('click', toggleMobileSidebar);
+
+  /* --- MOBILE OVERLAY --- */
+  document.getElementById('mobile-overlay').addEventListener('click', () => {
+    if (state.mobileSidebarOpen) toggleMobileSidebar();
+  });
+
+  /* --- TOUCH SWIPE sulla sidebar mobile --- */
+  setupSwipeToClose();
+
+  /* --- LEGENDA --- */
+  const legendEl = document.getElementById('map');
+  const legendDiv = document.createElement('div');
+  legendDiv.id = 'legend';
+  legendDiv.innerHTML = '<h4>Categorie</h4>' +
+    Object.entries(CAT_LABELS).map(([k, v]) =>
+      `<div class="leg-row"><div class="leg-dot" style="background:${CAT_COLORS[k]}"></div><span>${esc(v)}</span></div>`
+    ).join('') +
+    `<div class="leg-row" style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px"><div class="leg-dot" style="background:#ffcc00"></div><span style="font-weight:700">Spes</span></div>`;
+  document.getElementById('map-area').appendChild(legendDiv);
+
+  /* --- MAP INVALIDATE su resize --- */
+  const resizeObserver = new ResizeObserver(() => {
+    state.map.invalidateSize();
+  });
+  resizeObserver.observe(document.getElementById('map'));
+
+  /* --- VISUAL VIEWPORT: gestione tastiera virtuale (iOS/Android) --- */
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      const panel = document.getElementById('edit-panel');
+      if (panel.classList.contains('open') && isMobile()) {
+        const offset = window.innerHeight - window.visualViewport.height;
+        panel.style.bottom = offset + 'px';
+      }
+    });
+  }
+
+  /* --- PREVENT UNLOAD con unsaved changes --- */
+  window.addEventListener('beforeunload', e => {
+    if (state.hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  /* --- AVVIO --- */
+  buildFontGrid();
+  loadSavedStyle();
+  loadFromSheet().then(() => {
+    // dopo loadFromSheet i markers vengono disegnati con renderMarkers (base)
+    // riapplichiamo la versione con eventi
+    renderMarkersWithEvents();
+  });
+
+});
+
+/* ================================================================
+   DATA() — accessor per leggere state.data (uso in closures esterne)
+   ================================================================ */
+function DATA() { return state.data; }
+
+/* ================================================================
+   MOBILE
+   ================================================================ */
+function isMobile() { return window.innerWidth <= 768; }
+
+function toggleMobileSidebar() {
+  state.mobileSidebarOpen = !state.mobileSidebarOpen;
+  document.getElementById('sidebar').classList.toggle('mobile-open', state.mobileSidebarOpen);
+  document.getElementById('mobile-overlay').classList.toggle('visible', state.mobileSidebarOpen);
+  if (state.map) setTimeout(() => state.map.invalidateSize(), 320);
+}
+
+window.addEventListener('resize', () => {
+  if (!isMobile()) {
+    // Assicurati che la sidebar sia visibile su desktop
+    state.mobileSidebarOpen = false;
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('mobile-overlay').classList.remove('visible');
+  }
+  if (state.map) setTimeout(() => state.map.invalidateSize(), 320);
+});
+
+/* ================================================================
+   SWIPE TO CLOSE SIDEBAR (touch events)
+   ================================================================ */
+function setupSwipeToClose() {
+  const sidebar = document.getElementById('sidebar');
+  let startX = 0, startY = 0, isDragging = false;
+
+  sidebar.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    isDragging = false;
+  }, { passive: true });
+
+  sidebar.addEventListener('touchmove', e => {
+    const dx = e.touches[0].clientX - startX;
+    const dy = Math.abs(e.touches[0].clientY - startY);
+    if (!isDragging && dy < 10 && dx < -10) isDragging = true;
+  }, { passive: true });
+
+  sidebar.addEventListener('touchend', e => {
+    if (!isDragging) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    if (dx < -60 && state.mobileSidebarOpen) toggleMobileSidebar();
+    isDragging = false;
+  }, { passive: true });
+}
+
+/* ================================================================
+   SUGGERISCI MODAL
+   ================================================================ */
 function openSuggerisci() {
   document.getElementById('suggerisci-overlay').style.display = 'block';
-  document.getElementById('suggerisci-modal').style.display  = 'block';
+  document.getElementById('suggerisci-modal').style.display   = 'block';
   document.getElementById('sug-nome').focus();
 }
+
 function closeSuggerisci() {
   document.getElementById('suggerisci-overlay').style.display = 'none';
   document.getElementById('suggerisci-modal').style.display   = 'none';
-  document.getElementById('sug-nome').value     = '';
-  document.getElementById('sug-info').value     = '';
-  document.getElementById('sug-chi').value      = '';
+  document.getElementById('sug-nome').value        = '';
+  document.getElementById('sug-info').value        = '';
+  document.getElementById('sug-chi').value         = '';
   document.getElementById('sug-feedback').textContent = '';
 }
 
-async function inviaSuggerimento() {  // FIX: era "inviaStuggerimento"
-  const nome = document.getElementById('sug-nome').value.trim();
+async function inviaSuggerimento() {
+  const nomeEl = document.getElementById('sug-nome');
+  const nome   = nomeEl.value.trim();
   if (!nome) {
-    document.getElementById('sug-nome').style.borderColor = '#e74c3c';
-    setTimeout(() => document.getElementById('sug-nome').style.borderColor = '', 2000);
+    nomeEl.style.borderColor = '#e74c3c';
+    nomeEl.focus();
+    setTimeout(() => { nomeEl.style.borderColor = ''; }, 2000);
     return;
   }
   const info = document.getElementById('sug-info').value.trim();
   const chi  = document.getElementById('sug-chi').value.trim();
   const btn  = document.getElementById('sug-btn');
   const fb   = document.getElementById('sug-feedback');
-  btn.disabled = true; btn.textContent = 'Invio…'; fb.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Invio…';
+  fb.textContent  = '';
   try {
-    // FIX: payload con nomi campo corretti, allineati al doPost Apps Script
-   await fetch(SCRIPT_URL, {
+    await fetch(SCRIPT_URL, {
       method:  'POST',
       mode:    'no-cors',
       headers: { 'Content-Type': 'text/plain' },
       body:    JSON.stringify({
-        _tipo:              'suggerimento',
-        Suggerimento:       nome,
-        InfoSuggerimento:   info,
-        ChiSuggerisce:      chi,
-        DataSuggerimento:   new Date().toLocaleDateString('it-IT')
-      })
+        _tipo:            'suggerimento',
+        Suggerimento:     nome,
+        InfoSuggerimento: info,
+        ChiSuggerisce:    chi,
+        DataSuggerimento: new Date().toLocaleDateString('it-IT'),
+      }),
     });
-    fb.textContent = '✓ Grazie!'; fb.style.color = '#2ecc71';
+    fb.textContent = '✓ Grazie!';
+    fb.style.color = '#2ecc71';
     setTimeout(closeSuggerisci, 1500);
-  } catch(e) {
-    fb.textContent = 'Errore: ' + e.message; fb.style.color = '#e74c3c';
+  } catch (e) {
+    fb.textContent = 'Errore: ' + e.message;
+    fb.style.color = '#e74c3c';
   }
-  btn.disabled = false; btn.textContent = 'Invia';
+  btn.disabled = false;
+  btn.textContent = 'Invia';
 }
 
-// =====================================================================
-// NAV
-// =====================================================================
-function showPage(page, btn) {
-  currentPage = page;
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  ['mappa','ragnatela','stile'].forEach(p => {
-    document.getElementById('page-' + p).classList.toggle('active', p === page);
-  });
-  if (page === 'ragnatela') setTimeout(initRagnatela, 80);
-}
-
-// =====================================================================
-// MAPPA
-// =====================================================================
-let map;
-document.addEventListener('DOMContentLoaded', function() {
-
-  map = L.map('map').setView([41.945, 12.55], 12);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; CARTO', subdomains: 'abcd', maxZoom: 19
-  }).addTo(map);
-
-  function isSpes(d) { return d.Nome === SPES_NAME; }
-
-  function makeIcon(color, sel = false, spes = false) {
-    if (spes) {
-      const s = sel ? 22 : 18;
-      return L.divIcon({
-        html: `<div style="width:${s}px;height:${s}px;border-radius:50%;background:#ffcc00;border:3px solid #fff;box-shadow:0 0 0 3px #ffcc00,0 2px 10px rgba(255,204,0,.6);display:flex;align-items:center;justify-content:center;font-size:${Math.round(s*.5)}px">⭐</div>`,
-        className: '', iconSize: [s+6, s+6], iconAnchor: [(s+6)/2, (s+6)/2]
-      });
-    }
-    const s = sel ? 14 : 10;
-    return L.divIcon({
-      html: `<div style="width:${s}px;height:${s}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 5px rgba(0,0,0,.3)"></div>`,
-      className: '', iconSize: [s+4, s+4], iconAnchor: [(s+4)/2, (s+4)/2]
-    });
-  }
-
-  function filteredData() {
-    return DATA.map((d, i) => ({...d, _i: i})).filter(d => {
-      if (!activeCategories.has(d.Categoria)) return false;
-      if (activeStato === 'stale') return isStaleGlobal(d);
-      if (activeStato !== 'tutti' && d.Stato !== activeStato) return false;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        if (!d.Nome.toLowerCase().includes(q) && !d.Descrizione.toLowerCase().includes(q)) return false;
-      }
-      return true;
-    });
-  }
-  // Esponi per esportaCSV
-  window.filteredDataGlobal = filteredData;
-
-  // usa la versione globale
-  function isStale(d) { return isStaleGlobal(d); }
-
-  let hasUnsavedChanges = false;
-
-  function setDirty(val) {
-    hasUnsavedChanges = val;
-    const ind = document.getElementById('dirty-indicator');
-    if (ind) ind.classList.toggle('visible', val);
-  }
-
-  let showLabels = false, labelMarkers = [];
-
-  function toggleLabels() {
-    showLabels = !showLabels;
-    const btn = document.getElementById('btn-labels');
-    btn.textContent = showLabels ? '🏷 Etichette: on' : '🏷 Etichette: off';
-    btn.style.cssText = showLabels
-      ? 'font-size:.65rem;padding:3px 10px;border-radius:6px;border:1.5px solid var(--accent);background:var(--accent);cursor:pointer;font-family:var(--font);font-weight:700;color:white;transition:all .15s'
-      : 'font-size:.65rem;padding:3px 10px;border-radius:6px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-family:var(--font);font-weight:700;color:var(--muted);transition:all .15s';
-    renderMarkers();
-  }
-  // Esposta globalmente per onclick inline
-  window.toggleLabels = toggleLabels;
-
-  let presentationMode = false;
-  function togglePresentation() {
-    presentationMode = !presentationMode;
-    document.body.classList.toggle('presenting', presentationMode);
-    document.getElementById('btn-present').textContent = presentationMode ? '✕ Esci' : '⛶ Presentazione';
-    setTimeout(() => map.invalidateSize(), 300);
-  }
-  window.togglePresentation = togglePresentation;
-
-  const STATO_ORDER = {'In collaborazione':0,'Contattato':1,'Da contattare':2,'Non interessato':3};
-
-  function renderList() {
-    let items = filteredData();
-    const sort = document.getElementById('sort-select')?.value || 'default';
-    if (sort === 'nome') {
-      items = [...items].sort((a,b) => a.Nome.localeCompare(b.Nome, 'it'));
-    } else if (sort === 'stato') {
-      items = [...items].sort((a,b) => (STATO_ORDER[a.Stato]??9) - (STATO_ORDER[b.Stato]??9));
-    } else if (sort === 'data') {
-      items = [...items].sort((a,b) => {
-        const da = a.DataContatto ? new Date(a.DataContatto) : new Date(0);
-        const db = b.DataContatto ? new Date(b.DataContatto) : new Date(0);
-        return db - da; // più recenti prima
-      });
-    }
-    document.getElementById('list-count').textContent = items.length + ' realtà';
-    document.getElementById('list-container').innerHTML = items.map(d => {
-      const color = CAT_COLORS[d.Categoria] || '#aaa';
-      const cls   = STATO_CLASS[d.Stato]    || 'stato-da';
-      const sc    = isSpes(d) ? 'spes-item' : '';
-      const st    = isSpes(d) ? '<span class="spes-label">⭐ origine</span>' : '';
-      const stale = isStale(d) ? '<span class="stale-badge">⏰ ricontattare</span>' : '';
-      return `<div class="list-item ${sc} ${selectedIndex === d._i ? 'selected' : ''}" data-idx="${d._i}" onclick="selectItem(${d._i})">
-        <div style="display:flex;align-items:flex-start;gap:4px">
-          <div style="flex:1;min-width:0">
-            <div class="item-name">${d.Nome}</div>
-            <div class="item-meta"><div class="cat-dot" style="background:${color}"></div><span class="item-cat">${CAT_LABELS[d.Categoria]||d.Categoria}</span>${st}${stale}<span class="stato-badge ${cls}">${d.Stato}</span></div>
-          </div>
-          <button onclick="event.stopPropagation();gotoItem(${d._i})" title="Vai alla posizione" style="flex-shrink:0;background:none;border:1.5px solid var(--border);border-radius:5px;padding:3px 6px;cursor:pointer;font-size:.7rem;color:var(--muted);line-height:1;margin-top:2px" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">⊙</button>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  function renderMarkers() {
-    markers.forEach(m => map.removeLayer(m)); markers = [];
-    labelMarkers.forEach(m => map.removeLayer(m)); labelMarkers = [];
-    filteredData().forEach(d => {
-      const color = CAT_COLORS[d.Categoria] || '#aaa';
-      const m = L.marker([d.Lat, d.Lng], {icon: makeIcon(color, selectedIndex === d._i, isSpes(d))})
-        .addTo(map).on('click', () => selectItem(d._i));
-      m._di = d._i; markers.push(m);
-      if (showLabels) {
-        const lm = L.marker([d.Lat, d.Lng], {
-          icon: L.divIcon({
-            html: `<div style="font-family:var(--font);font-size:10px;font-weight:700;color:var(--ink);white-space:nowrap;margin-top:14px;text-shadow:0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff">${d.Nome.length>22 ? d.Nome.slice(0,20)+'…' : d.Nome}</div>`,
-            className: '', iconAnchor: [0,0]
-          }), interactive: false
-        }).addTo(map);
-        labelMarkers.push(lm);
-      }
-    });
-  }
-
-  function selectItem(idx) {
-    selectedIndex = idx;
-    const d = DATA[idx], color = CAT_COLORS[d.Categoria] || '#aaa';
-    document.querySelectorAll('.list-item').forEach(el => el.classList.remove('selected'));
-    const el = document.querySelector(`[data-idx="${idx}"]`);
-    if (el) { el.classList.add('selected'); el.scrollIntoView({block:'nearest'}); }
-    map.flyTo([d.Lat, d.Lng], 15, {duration: .8});
-    markers.forEach(m => m.setIcon(makeIcon(CAT_COLORS[DATA[m._di]?.Categoria]||'#aaa', m._di===idx, isSpes(DATA[m._di]))));
-    const sp       = isSpes(d) ? '<div class="popup-spes-tag">⭐ Punto di origine della rete</div>' : '';
-    const dsc      = d.Descrizione ? `<div class="popup-desc">${d.Descrizione}</div>` : '';
-    const cnt      = d.Contatto    ? `<div class="popup-field"><label>Referente</label>${d.Contatto}</div>` : '';
-    const dt       = d.DataContatto? `<div class="popup-field"><label>Ultimo contatto</label>${d.DataContatto}</div>` : '';
-    const staleW   = isStale(d) ? `<div style="font-size:.7rem;color:#a05000;background:#fff0e0;border-radius:5px;padding:4px 8px;margin-bottom:8px">⏰ Non contattato da più di ${STALE_DAYS} giorni</div>` : '';
-    const nt       = d.Note       ? `<div class="popup-field"><label>Note</label>${d.Note}</div>` : '';
-    const col      = d.Collabora  ? `<div class="popup-field"><label>Collabora con</label>${d.Collabora}</div>` : '';
-    L.popup({maxWidth: 310}).setLatLng([d.Lat, d.Lng]).setContent(`<div class="popup-wrap">
-      <div class="popup-nome">${d.Nome}</div>${sp}
-      <div class="popup-cat"><span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span> ${CAT_LABELS[d.Categoria]||d.Categoria}</div>
-      <span class="stato-badge ${STATO_CLASS[d.Stato]||'stato-da'}">${d.Stato}</span>
-      ${staleW}${dsc}${cnt}${dt}${nt}${col}
-      <div class="popup-actions"><button class="popup-btn" onclick="openEdit(${idx})">✏ Modifica</button></div>
-    </div>`).openOn(map);
-  }
-  window.selectItem = selectItem;
-
-  // Centra la mappa sul marker senza aprire popup né selezionare l'item
-  function gotoItem(idx) {
-    const d = DATA[idx];
-    if (!d) return;
-    map.flyTo([d.Lat, d.Lng], 16, {duration: .7});
-    // Lampeggia il marker per 1 secondo per indicare la posizione
-    const m = markers.find(m => m._di === idx);
-    if (m) {
-      const origIcon = m.getIcon();
-      const color = CAT_COLORS[d.Categoria] || '#aaa';
-      m.setIcon(makeIcon('#ffffff', true, isSpes(d)));
-      setTimeout(() => m.setIcon(makeIcon(color, selectedIndex === idx, isSpes(d))), 400);
-      setTimeout(() => m.setIcon(makeIcon('#ffffff', true, isSpes(d))), 800);
-      setTimeout(() => m.setIcon(makeIcon(color, selectedIndex === idx, isSpes(d))), 1200);
-    }
-  }
-  window.gotoItem = gotoItem;
-
-  // =====================================================================
-  // EDIT PANEL
-  // =====================================================================
-  function openEdit(idx) {
-    editingIndex = idx;
-    const d = DATA[idx];
-    document.getElementById('edit-title').textContent   = d.Nome;
-    document.getElementById('edit-stato').value         = d.Stato;
-    document.getElementById('edit-contatto').value      = d.Contatto    || '';
-    document.getElementById('edit-data').value          = d.DataContatto|| '';
-    document.getElementById('edit-note').value          = d.Note        || '';
-    document.getElementById('save-feedback').textContent= '';
-    setDirty(false);
-    const cur  = (d.Collabora||'').split(',').map(s => s.trim()).filter(Boolean);
-    const list = document.getElementById('collab-list');
-    list.innerHTML = '';
-    DATA.filter(x => x.Nome !== d.Nome).forEach(x => {
-      const lbl = document.createElement('label');
-      lbl.className = 'collab-check';
-      lbl.innerHTML = `<input type="checkbox" value="${x.Nome}" ${cur.includes(x.Nome)?'checked':''}><span style="width:7px;height:7px;border-radius:50%;background:${CAT_COLORS[x.Categoria]||'#aaa'};display:inline-block;flex-shrink:0"></span>${x.Nome}`;
-      lbl.querySelector('input').addEventListener('change', () => setDirty(true));
-      list.appendChild(lbl);
-    });
-    // Segna dirty al primo cambiamento su qualsiasi campo
-    ['edit-stato','edit-contatto','edit-data','edit-note'].forEach(id => {
-      document.getElementById(id).addEventListener('input', () => setDirty(true), {once: true});
-      document.getElementById(id).addEventListener('change', () => setDirty(true), {once: true});
-    });
-    document.getElementById('edit-panel').classList.add('open');
-  }
-  window.openEdit = openEdit;
-
-  function closeEdit() {
-    document.getElementById('edit-panel').classList.remove('open');
-    setDirty(false);
-    editingIndex = null;
-  }
-  window.closeEdit = closeEdit;
-
-  // Chiusura con guardia: chiede conferma se ci sono modifiche non salvate
-  function closeEditGuard() {
-    if (hasUnsavedChanges) {
-      if (!confirm('Hai modifiche non salvate. Chiudere senza salvare?')) return;
-    }
-    closeEdit();
-  }
-  window.closeEditGuard = closeEditGuard;
-
-  async function saveEdit() {
-    if (editingIndex === null) return;
-    const d = DATA[editingIndex];
-    d.Stato        = document.getElementById('edit-stato').value;
-    d.Contatto     = document.getElementById('edit-contatto').value;
-    d.DataContatto = document.getElementById('edit-data').value;
-    d.Note         = document.getElementById('edit-note').value;
-    d.Collabora    = [...document.getElementById('collab-list').querySelectorAll('input:checked')].map(c => c.value).join(', ');
-    const btn = document.getElementById('save-btn');
-    btn.disabled = true;
-    document.getElementById('save-feedback').textContent = 'Salvataggio…';
-    const ok = await saveRow(d);
-    btn.disabled = false;
-    if (ok) {
-      setDirty(false);
-      document.getElementById('save-feedback').textContent = '✓ Salvato';
-      setTimeout(() => document.getElementById('save-feedback').textContent = '', 2000);
-      const si = editingIndex;
-      closeEdit(); map.closePopup();
-      updateDashboard(); renderList(); renderMarkers(); selectItem(si);
-      if (currentPage === 'ragnatela') drawRagnatela();
-    } else {
-      document.getElementById('save-feedback').textContent = '✗ Salvataggio fallito';
-      document.getElementById('save-feedback').style.color = '#e74c3c';
-    }
-  }
-  window.saveEdit = saveEdit;
-
-  // =====================================================================
-  // FILTRI CATEGORIE
-  // FIX: uso clear() + add() in loop invece di riassegnazione della variabile
-  // =====================================================================
-  function buildCatFilters() {
-    const container = document.getElementById('cat-filters');
-    container.innerHTML = '';
-    const cats = [...new Set(DATA.map(d => d.Categoria))];
-    const allBtn = document.createElement('button');
-    allBtn.className = 'filter-btn';
-    allBtn.textContent = 'Tutti';
-    allBtn.style.cssText = 'background:var(--accent);color:white;border-color:var(--accent)';
-    allBtn.onclick = () => {
-      if (activeCategories.size === cats.length) {
-        activeCategories.clear();
-        allBtn.style.cssText = 'background:white;color:var(--muted)';
-        document.querySelectorAll('.filter-btn[data-cat]').forEach(b => {
-          b.style.background = 'white'; b.style.color = CAT_COLORS[b.dataset.cat] || '#aaa';
-        });
-      } else {
-        // FIX: clear + add invece di new Set(cats)
-        activeCategories.clear();
-        cats.forEach(c => activeCategories.add(c));
-        allBtn.style.cssText = 'background:var(--accent);color:white;border-color:var(--accent)';
-        document.querySelectorAll('.filter-btn[data-cat]').forEach(b => {
-          const c = CAT_COLORS[b.dataset.cat] || '#aaa'; b.style.background = c; b.style.color = 'white';
-        });
-      }
-      renderList(); renderMarkers();
-    };
-    container.appendChild(allBtn);
-    cats.forEach(cat => {
-      const btn   = document.createElement('button');
-      btn.className = 'filter-btn'; btn.textContent = CAT_LABELS[cat] || cat; btn.dataset.cat = cat;
-      const color = CAT_COLORS[cat] || '#aaa';
-      btn.style.cssText = `background:${color};color:white;border-color:${color}`;
-      btn.onclick = () => {
-        if (activeCategories.has(cat)) { activeCategories.delete(cat); btn.style.background='white'; btn.style.color=color; }
-        else { activeCategories.add(cat); btn.style.background=color; btn.style.color='white'; }
-        renderList(); renderMarkers();
-      };
-      container.appendChild(btn);
-    });
-  }
-  window.buildCatFilters = buildCatFilters;
-
-  document.querySelectorAll('.stato-btn').forEach(btn => btn.onclick = () => {
-    activeStato = btn.dataset.stato;
-    document.querySelectorAll('.stato-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.dash-card').forEach(c => c.classList.remove('active-filter'));
-    const map2 = {'In collaborazione':'.dash-col','Contattato':'.dash-cnt','Da contattare':'.dash-da','Non interessato':'.dash-non'};
-    if (map2[activeStato]) document.querySelector(map2[activeStato]).classList.add('active-filter');
-    renderList(); renderMarkers();
-  });
-
-  document.getElementById('search-input').addEventListener('input', e => {
-    searchQuery = e.target.value; renderList(); renderMarkers();
-  });
-
-  // Legenda
-  document.getElementById('map').insertAdjacentHTML('beforeend', `<div id="legend"><h4>Categorie</h4>${Object.entries(CAT_LABELS).map(([k,v])=>`<div class="leg-row"><div class="leg-dot" style="background:${CAT_COLORS[k]}"></div><span>${v}</span></div>`).join('')}<div class="leg-row" style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px"><div class="leg-dot" style="background:#ffcc00"></div><span style="font-weight:700">Spes</span></div></div>`);
-
-  // Esponi funzioni usate da HTML inline
-  window.renderList    = renderList;
-  window.renderMarkers = renderMarkers;
-  window.setDirty      = setDirty;
-
-  // Avviso browser se si naviga via con modifiche non salvate
-  window.addEventListener('beforeunload', e => {
-    if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; }
-  });
-
-  // =====================================================================
-  // MOBILE: sidebar a scomparsa con hamburger
-  // =====================================================================
-  let mobileSidebarOpen = false;
-
-  function isMobile() { return window.innerWidth <= 768; }
-
-  function toggleMobileSidebar() {
-    mobileSidebarOpen = !mobileSidebarOpen;
-    document.getElementById('sidebar').classList.toggle('mobile-open', mobileSidebarOpen);
-    document.getElementById('mobile-overlay').classList.toggle('visible', mobileSidebarOpen);
-    setTimeout(() => map.invalidateSize(), 300);
-  }
-  window.toggleMobileSidebar = toggleMobileSidebar;
-
-  function setupMobile() {
-    const hamburger = document.getElementById('btn-hamburger');
-    if (isMobile()) {
-      hamburger.style.display = 'flex';
-      // Chiudi sidebar se si ruota o ridimensiona
-      if (!mobileSidebarOpen) {
-        document.getElementById('sidebar').classList.remove('mobile-open');
-        document.getElementById('mobile-overlay').classList.remove('visible');
-      }
-    } else {
-      hamburger.style.display = 'none';
-      document.getElementById('sidebar').classList.remove('mobile-open');
-      document.getElementById('mobile-overlay').classList.remove('visible');
-      mobileSidebarOpen = false;
-    }
-    setTimeout(() => map.invalidateSize(), 320);
-  }
-
-  setupMobile();
-  window.addEventListener('resize', setupMobile);
-
-  // =====================================================================
-  // RAGNATELA
-  // =====================================================================
-  function initRagnatela() {
-    if (!ragMap) {
-      ragMap = L.map('ragnatela-map', {zoomControl:true, attributionControl:false})
-        .setView(map.getCenter(), map.getZoom());
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {subdomains:'abcd', maxZoom:19, opacity:0.7}).addTo(ragMap);
-    } else {
-      ragMap.setView(map.getCenter(), map.getZoom());
-    }
-    setTimeout(() => {
-      ragMap.invalidateSize();
-      const sel = document.getElementById('rag-focus');
-      const cur = sel.value;
-      sel.innerHTML = '<option value="">— tutte —</option>';
-      DATA.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d.Nome; opt.textContent = d.Nome;
-        if (d.Nome === cur) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      drawRagnatela();
-    }, 200);
-  }
-  window.initRagnatela = initRagnatela;
-
-  // =====================================================================
-  // AVVIO
-  // =====================================================================
-  buildFontGrid();
-  loadSavedStyle();
-  loadFromSheet();
-
-}); // end DOMContentLoaded
-
-// =====================================================================
-// RAGNATELA DRAW (fuori da DOMContentLoaded per scope globale)
-// =====================================================================
+/* ================================================================
+   RAGNATELA
+   ================================================================ */
 function getRagStyle() {
   return {
     wS: parseFloat(document.getElementById('rag-w-spes')?.value || 1.5),
@@ -1222,117 +2117,182 @@ function getRagStyle() {
   };
 }
 
+function initRagnatela() {
+  if (!state.ragMap) {
+    state.ragMap = L.map('ragnatela-map', { zoomControl: true, attributionControl: false })
+      .setView(state.map ? state.map.getCenter() : [41.945, 12.55],
+               state.map ? state.map.getZoom()   : 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd', maxZoom: 19, opacity: 0.7,
+    }).addTo(state.ragMap);
+  } else {
+    if (state.map) state.ragMap.setView(state.map.getCenter(), state.map.getZoom());
+  }
+
+  setTimeout(() => {
+    state.ragMap.invalidateSize();
+    const sel = document.getElementById('rag-focus');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— tutte —</option>';
+    state.data.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.Nome;
+      opt.textContent = d.Nome;
+      if (d.Nome === cur) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    drawRagnatela();
+  }, 200);
+}
+
 function drawRagnatela() {
-  if (!ragMap) return;
-  ragLayers.forEach(l => ragMap.removeLayer(l)); ragLayers = [];
+  if (!state.ragMap) return;
+  state.ragLayers.forEach(l => state.ragMap.removeLayer(l));
+  state.ragLayers = [];
+
   const focusName = document.getElementById('rag-focus')?.value || '';
-  const edges = new Map();
-  DATA.forEach(d => {
-    if (d.Stato === 'In collaborazione' && !isSpesFn(d)) {
-      const spes = DATA.find(x => isSpesFn(x));
-      if (spes) { const key = [d.Nome, SPES_NAME].sort().join('|||'); if (!edges.has(key)) edges.set(key, {dA:d, dB:spes, type:'spes'}); }
+  const edges     = new Map();
+
+  state.data.forEach(d => {
+    if (d.Stato === 'In collaborazione' && !isSpes(d)) {
+      const spes = state.data.find(x => isSpes(x));
+      if (spes) {
+        const key = [d.Nome, SPES_NAME].sort().join('|||');
+        if (!edges.has(key)) edges.set(key, { dA: d, dB: spes, type: 'spes' });
+      }
     }
-    (d.Collabora||'').split(',').map(s => s.trim()).filter(Boolean).forEach(name => {
-      const dB = DATA.find(x => x.Nome === name); if (!dB) return;
+    (d.Collabora || '').split(',').map(s => s.trim()).filter(Boolean).forEach(name => {
+      const dB  = state.data.find(x => x.Nome === name);
+      if (!dB) return;
       const key = [d.Nome, name].sort().join('|||');
-      if (!edges.has(key)) edges.set(key, {dA:d, dB, type: d.Nome===SPES_NAME||name===SPES_NAME ? 'spes' : 'peer'});
+      if (!edges.has(key)) {
+        edges.set(key, { dA: d, dB, type: (d.Nome === SPES_NAME || name === SPES_NAME) ? 'spes' : 'peer' });
+      }
     });
   });
-  const involved = new Set(); let connCount = 0;
-  edges.forEach(({dA, dB, type}) => {
+
+  const involved = new Set();
+  let connCount  = 0;
+  edges.forEach(({ dA, dB, type }) => {
     if (focusName && dA.Nome !== focusName && dB.Nome !== focusName) return;
-    const isSC = type === 'spes';
-    const s = getRagStyle();
-    const line = L.polyline([[dA.Lat,dA.Lng],[dB.Lat,dB.Lng]], {
-      color: isSC ? s.cS : s.cP, opacity: isSC ? s.oS : s.oP,
-      weight: isSC ? s.wS : s.wP, dashArray: isSC ? null : '3 5'
-    }).addTo(ragMap);
-    ragLayers.push(line); involved.add(dA.Nome); involved.add(dB.Nome); connCount++;
+    const isSC  = type === 'spes';
+    const s     = getRagStyle();
+    const line  = L.polyline([[dA.Lat, dA.Lng], [dB.Lat, dB.Lng]], {
+      color:    isSC ? s.cS : s.cP,
+      opacity:  isSC ? s.oS : s.oP,
+      weight:   isSC ? s.wS : s.wP,
+      dashArray: isSC ? null : '3 5',
+    }).addTo(state.ragMap);
+    state.ragLayers.push(line);
+    involved.add(dA.Nome);
+    involved.add(dB.Nome);
+    connCount++;
   });
-  DATA.forEach(d => {
-    const isInv  = involved.has(d.Nome);
-    const color  = isSpesFn(d) ? '#ffcc00' : (CAT_COLORS[d.Categoria] || '#6666ff');
-    const r      = isSpesFn(d) ? 12 : (isInv ? 7 : 3);
-    const op     = isInv ? 1 : .15;
-    const m = L.circleMarker([d.Lat, d.Lng], {radius:r, fillColor:color, color:'rgba(0,0,0,.3)', weight:1.5, fillOpacity:op}).addTo(ragMap);
-    if (isInv) m.bindTooltip(`<strong>${d.Nome}</strong><br><span style="font-size:.72rem;opacity:.7">${CAT_LABELS[d.Categoria]||d.Categoria}</span>`, {direction:'top', className:'rag-tooltip'});
-    ragLayers.push(m);
+
+  state.data.forEach(d => {
+    const isInv = involved.has(d.Nome);
+    const color = isSpes(d) ? '#ffcc00' : (CAT_COLORS[d.Categoria] || '#6666ff');
+    const r     = isSpes(d) ? 12 : (isInv ? 7 : 3);
+    const op    = isInv ? 1 : .15;
+    const m     = L.circleMarker([d.Lat, d.Lng], {
+      radius: r, fillColor: color,
+      color: 'rgba(0,0,0,.3)', weight: 1.5, fillOpacity: op,
+    }).addTo(state.ragMap);
+    if (isInv) {
+      m.bindTooltip(
+        `<strong>${esc(d.Nome)}</strong><br><span style="font-size:.72rem;opacity:.7">${esc(CAT_LABELS[d.Categoria] || d.Categoria)}</span>`,
+        { direction: 'top', className: 'rag-tooltip' }
+      );
+    }
+    state.ragLayers.push(m);
   });
-  const suffix = focusName ? ` per "${focusName.length>20 ? focusName.slice(0,18)+'…' : focusName}"` : '';
-  document.getElementById('ragnatela-count').textContent = connCount + (connCount===1?' connessione attiva':' connessioni attive') + suffix;
+
+  const suffix = focusName
+    ? ` per "${focusName.length > 20 ? focusName.slice(0, 18) + '…' : focusName}"`
+    : '';
+  document.getElementById('ragnatela-count').textContent =
+    connCount + (connCount === 1 ? ' connessione attiva' : ' connessioni attive') + suffix;
 }
 
-// helper globale per ragnatela (isSpes non è in scope fuori da DOMContentLoaded)
-function isSpesFn(d) { return d.Nome === SPES_NAME; }
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('rag-focus').addEventListener('change', drawRagnatela);
 
-function updateRagStyle() {
-  document.getElementById('lbl-w-spes').textContent = document.getElementById('rag-w-spes').value + 'px';
-  document.getElementById('lbl-o-spes').textContent = document.getElementById('rag-o-spes').value + '%';
-  document.getElementById('lbl-w-peer').textContent = document.getElementById('rag-w-peer').value + 'px';
-  document.getElementById('lbl-o-peer').textContent = document.getElementById('rag-o-peer').value + '%';
-  drawRagnatela();
-}
+  ['rag-w-spes','rag-o-spes','rag-w-peer','rag-o-peer','rag-c-spes','rag-c-peer'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      if (document.getElementById('lbl-w-spes')) {
+        document.getElementById('lbl-w-spes').textContent = document.getElementById('rag-w-spes').value + 'px';
+        document.getElementById('lbl-o-spes').textContent = document.getElementById('rag-o-spes').value + '%';
+        document.getElementById('lbl-w-peer').textContent = document.getElementById('rag-w-peer').value + 'px';
+        document.getElementById('lbl-o-peer').textContent = document.getElementById('rag-o-peer').value + '%';
+      }
+      drawRagnatela();
+    });
+  });
+});
 
-// =====================================================================
-// STILE
-// =====================================================================
-function livePreview() {
-  ['accent','bg','ink','spes'].forEach(k => document.getElementById('hex-'+k).textContent = document.getElementById('color-'+k).value);
-  applyTheme(
-    document.getElementById('color-accent').value,
-    document.getElementById('color-bg').value,
-    document.getElementById('color-ink').value,
-    document.getElementById('color-spes').value,
-    currentFont
-  );
+/* ================================================================
+   STILE
+   ================================================================ */
+function lighten(hex, pct) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = n >> 16, g = (n >> 8) & 0xff, b = n & 0xff;
+  const m = c => Math.round(c + (255 - c) * pct / 100);
+  return '#' + [m(r), m(g), m(b)].map(x => x.toString(16).padStart(2, '0')).join('');
 }
 
 function applyTheme(accent, bg, ink, spes, font) {
   const r = document.documentElement.style;
-  r.setProperty('--accent', accent); r.setProperty('--bg', bg);
-  r.setProperty('--ink', ink);       r.setProperty('--spes', spes);
+  r.setProperty('--accent',       accent);
+  r.setProperty('--bg',           bg);
+  r.setProperty('--ink',          ink);
+  r.setProperty('--spes',         spes);
   r.setProperty('--accent-light', lighten(accent, 90));
   r.setProperty('--accent-mid',   lighten(accent, 50));
-  r.setProperty('--font', `'${font}',sans-serif`);
+  r.setProperty('--font',         `'${font}',sans-serif`);
   document.body.style.fontFamily = `'${font}',sans-serif`;
 }
 
-function lighten(hex, pct) {
-  const n = parseInt(hex.slice(1), 16), r = n>>16, g = (n>>8&0xff), b = (n&0xff);
-  const m = c => Math.round(c + (255-c)*pct/100);
-  return '#' + [m(r),m(g),m(b)].map(x => x.toString(16).padStart(2,'0')).join('');
-}
-
-function applyStyle() {
+function livePreview() {
+  ['accent', 'bg', 'ink', 'spes'].forEach(k => {
+    document.getElementById('hex-' + k).textContent = document.getElementById('color-' + k).value;
+  });
   applyTheme(
     document.getElementById('color-accent').value,
     document.getElementById('color-bg').value,
     document.getElementById('color-ink').value,
     document.getElementById('color-spes').value,
-    currentFont
+    state.currentFont,
   );
+}
+
+function applyStyle() {
+  livePreview();
   try {
     localStorage.setItem('sdc_style', JSON.stringify({
       accent: document.getElementById('color-accent').value,
       bg:     document.getElementById('color-bg').value,
       ink:    document.getElementById('color-ink').value,
       spes:   document.getElementById('color-spes').value,
-      font:   currentFont
+      font:   state.currentFont,
     }));
-  } catch(e) {}
+    showToast('Stile salvato ✓');
+  } catch (e) {}
 }
 
 function resetStyle() {
-  const d = {accent:'#0000ff', bg:'#f5f5ff', ink:'#0a0a2e', spes:'#ffcc00', font:'Nunito'};
-  document.getElementById('color-accent').value = d.accent;
-  document.getElementById('color-bg').value     = d.bg;
-  document.getElementById('color-ink').value    = d.ink;
-  document.getElementById('color-spes').value   = d.spes;
-  currentFont = d.font;
-  document.querySelectorAll('.font-card').forEach(c => c.classList.toggle('selected', c.dataset.font === d.font));
-  applyTheme(d.accent, d.bg, d.ink, d.spes, d.font);
-  try { localStorage.removeItem('sdc_style'); } catch(e) {}
+  const defaults = { accent: '#0000ff', bg: '#f5f5ff', ink: '#0a0a2e', spes: '#ffcc00', font: 'Nunito' };
+  document.getElementById('color-accent').value = defaults.accent;
+  document.getElementById('color-bg').value     = defaults.bg;
+  document.getElementById('color-ink').value    = defaults.ink;
+  document.getElementById('color-spes').value   = defaults.spes;
+  state.currentFont = defaults.font;
+  document.querySelectorAll('.font-card').forEach(c => c.classList.toggle('selected', c.dataset.font === defaults.font));
+  applyTheme(defaults.accent, defaults.bg, defaults.ink, defaults.spes, defaults.font);
+  try { localStorage.removeItem('sdc_style'); } catch (e) {}
   livePreview();
+  showToast('Stile ripristinato');
 }
 
 function loadSavedStyle() {
@@ -1343,33 +2303,53 @@ function loadSavedStyle() {
     document.getElementById('color-bg').value     = s.bg     || '#f5f5ff';
     document.getElementById('color-ink').value    = s.ink    || '#0a0a2e';
     document.getElementById('color-spes').value   = s.spes   || '#ffcc00';
-    currentFont = s.font || 'Nunito';
-    applyTheme(s.accent, s.bg, s.ink, s.spes, currentFont);
+    state.currentFont = s.font || 'Nunito';
+    applyTheme(s.accent, s.bg, s.ink, s.spes, state.currentFont);
     livePreview();
-  } catch(e) {}
+  } catch (e) {}
 }
 
 function buildFontGrid() {
   const grid = document.getElementById('font-grid');
   FONTS.forEach(f => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=${f.google}&display=swap`;
+    const link   = document.createElement('link');
+    link.rel     = 'stylesheet';
+    link.href    = `https://fonts.googleapis.com/css2?family=${f.google}&display=swap`;
     document.head.appendChild(link);
+
     const card = document.createElement('div');
-    card.className = 'font-card' + (f.name === currentFont ? ' selected' : '');
+    card.className = 'font-card' + (f.name === state.currentFont ? ' selected' : '');
     card.dataset.font = f.name;
-    card.innerHTML = `<div class="font-name">${f.name}</div><div class="font-sample" style="font-family:'${f.name}',sans-serif">Aa — Rete Monelli</div>`;
-    card.onclick = () => {
-      currentFont = f.name;
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'font-name';
+    nameEl.textContent = f.name;
+
+    const sampleEl = document.createElement('div');
+    sampleEl.className = 'font-sample';
+    sampleEl.style.fontFamily = `'${f.name}',sans-serif`;
+    sampleEl.textContent = 'Aa — Rete Monelli';
+
+    card.appendChild(nameEl);
+    card.appendChild(sampleEl);
+    card.addEventListener('click', () => {
+      state.currentFont = f.name;
       document.querySelectorAll('.font-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       livePreview();
-    };
+    });
     grid.appendChild(card);
   });
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+  // Stile controls
+  ['color-accent','color-bg','color-ink','color-spes'].forEach(id => {
+    document.getElementById(id).addEventListener('input', livePreview);
+  });
+  document.getElementById('btn-stile-apply').addEventListener('click', applyStyle);
+  document.getElementById('btn-stile-reset').addEventListener('click', resetStyle);
+});
 </script>
 </body>
 </html>
