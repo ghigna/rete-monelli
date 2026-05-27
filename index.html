@@ -70,7 +70,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
   border-bottom: 3px solid transparent;
   transition: color .18s, border-color .18s;
   white-space: nowrap;
-  min-height: 44px; /* touch target */
+  min-height: 44px;
 }
 .nav-tab.active  { color: #fff; border-bottom-color: var(--spes); }
 .nav-tab:hover:not(.active) { color: rgba(255,255,255,.8); }
@@ -139,7 +139,6 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
   transition: background .15s;
   position: relative;
   user-select: none;
-  /* touch target */
   min-height: 56px;
 }
 .dash-card:last-child { border-right: none; }
@@ -200,7 +199,6 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
   color: var(--ink);
   outline: none;
   margin-bottom: 9px;
-  /* touch */
   min-height: 44px;
   -webkit-appearance: none;
 }
@@ -283,7 +281,6 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background .12s;
-  /* touch target: min 44px di altezza minima implicita con padding */
 }
 .list-item:hover    { background: var(--bg); }
 .list-item.selected { background: var(--accent-light); border-left: 3px solid var(--accent); }
@@ -661,27 +658,8 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
   #sync-label     { display: none; }
   #btn-hamburger  { display: flex !important; }
 
-  /* --- DASHBOARD mobile: griglia 3+3 leggibile con una mano --- */
-  #dashboard {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    overflow-x: visible;
-    border-bottom: 1px solid var(--border);
-  }
-  .dash-card {
-    min-width: 0;
-    padding: 9px 8px 10px;
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-  }
-  /* Rimuovi border-right sull'ultima colonna di ogni riga */
-  .dash-card:nth-child(3n) { border-right: none; }
-  /* Rimuovi border-bottom sulla seconda riga */
-  .dash-card:nth-child(4),
-  .dash-card:nth-child(5),
-  .dash-card:nth-child(6) { border-bottom: none; }
-  .dash-num   { font-size: 1.3rem; }
-  .dash-label { font-size: .53rem; letter-spacing: .03em; }
+  /* --- DASHBOARD: nascosto su mobile --- */
+  #dashboard { display: none; }
 
   /* --- MAP AREA --- */
   #map-area { flex-direction: column; position: relative; }
@@ -759,7 +737,6 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
     -webkit-overflow-scrolling: touch;
     padding: 16px 14px calc(16px + var(--safe-bottom));
     border-radius: 16px 16px 0 0;
-    /* Quando la tastiera è aperta, il panel stare al di sotto */
     transition: transform .28s cubic-bezier(.4,0,.2,1), bottom .2s ease;
   }
   .edit-row   { flex-direction: column; gap: 8px; }
@@ -769,6 +746,34 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
   .edit-field textarea { font-size: .88rem; }
   .edit-actions { flex-wrap: wrap; }
   .save-btn, .cancel-btn { padding: 12px 18px; font-size: .84rem; }
+
+  /* --- POPUP MOBILE: centrato, non troncato --- */
+  .leaflet-popup {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    margin-left: 0 !important;
+  }
+  .leaflet-popup-content-wrapper {
+    max-width: calc(100vw - 32px) !important;
+    width: calc(100vw - 32px) !important;
+    left: auto !important;
+  }
+  .leaflet-popup-content {
+    width: auto !important;
+    max-width: 100% !important;
+    margin: 13px 14px !important;
+  }
+  .popup-wrap {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .popup-nome {
+    font-size: .88rem !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+  .leaflet-popup-tip-container { display: none; }
 
   /* --- MODALE SUGGERISCI: bottom sheet --- */
   #suggerisci-modal {
@@ -983,7 +988,7 @@ body.presenting #edit-panel { left: 0; }
     <div id="ragnatela-map"></div>
     <div id="ragnatela-info">
       <h3>🕸 Ragnatela</h3>
-      <p>Fili gialli = con Spes. Fili bianchi = tra realtà. Naviga liberamente.</p>
+      <p>Fili azzurri = con Spes. Fili gialli = tra realtà. Naviga liberamente.</p>
       <div id="ragnatela-count">— connessioni</div>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15)">
         <div style="font-size:.65rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Mostra solo connessioni di</div>
@@ -1023,12 +1028,26 @@ body.presenting #edit-panel { left: 0; }
 
       <div class="stile-section">
         <h3>Stile Ragnatela</h3>
-        <div class="stile-row"><label>Spessore fili Spes</label><input type="range" id="rag-w-spes" min="0.5" max="6" step="0.5" value="1.5" style="flex:1;accent-color:#ffcc00"><span class="color-hex" id="lbl-w-spes">1.5px</span></div>
-        <div class="stile-row"><label>Opacità fili Spes</label> <input type="range" id="rag-o-spes" min="5"   max="100" step="5"  value="45"  style="flex:1;accent-color:#ffcc00"><span class="color-hex" id="lbl-o-spes">45%</span></div>
-        <div class="stile-row"><label>Spessore fili peer</label><input type="range" id="rag-w-peer" min="0.5" max="6" step="0.5" value="0.8" style="flex:1;accent-color:#aaaaff"><span class="color-hex" id="lbl-w-peer">0.8px</span></div>
-        <div class="stile-row"><label>Opacità fili peer</label> <input type="range" id="rag-o-peer" min="5"   max="100" step="5"  value="15"  style="flex:1;accent-color:#aaaaff"><span class="color-hex" id="lbl-o-peer">15%</span></div>
-        <div class="stile-row"><label>Colore fili Spes</label>  <input type="color" id="rag-c-spes" value="#ffcc00" style="width:44px;height:36px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px"></div>
-        <div class="stile-row"><label>Colore fili peer</label>  <input type="color" id="rag-c-peer" value="#ffffff" style="width:44px;height:36px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px"></div>
+        <div class="stile-row"><label>Stile filo Spes</label>
+          <select id="rag-dash-spes" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.8rem;background:#fff;color:var(--ink);cursor:pointer;min-height:36px;outline:none">
+            <option value="solid">── Continuo</option>
+            <option value="dashed">╌╌ Tratteggiato</option>
+            <option value="dotted">·· Puntinato</option>
+          </select>
+        </div>
+        <div class="stile-row"><label>Stile filo peer</label>
+          <select id="rag-dash-peer" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.8rem;background:#fff;color:var(--ink);cursor:pointer;min-height:36px;outline:none">
+            <option value="solid">── Continuo</option>
+            <option value="dashed">╌╌ Tratteggiato</option>
+            <option value="dotted">·· Puntinato</option>
+          </select>
+        </div>
+        <div class="stile-row"><label>Spessore fili Spes</label><input type="range" id="rag-w-spes" min="0.5" max="6" step="0.5" value="2" style="flex:1;accent-color:#00ccff"><span class="color-hex" id="lbl-w-spes">2px</span></div>
+        <div class="stile-row"><label>Opacità fili Spes</label> <input type="range" id="rag-o-spes" min="5"   max="100" step="5"  value="65"  style="flex:1;accent-color:#00ccff"><span class="color-hex" id="lbl-o-spes">65%</span></div>
+        <div class="stile-row"><label>Spessore fili peer</label><input type="range" id="rag-w-peer" min="0.5" max="6" step="0.5" value="1.2" style="flex:1;accent-color:#ffcc00"><span class="color-hex" id="lbl-w-peer">1.2px</span></div>
+        <div class="stile-row"><label>Opacità fili peer</label> <input type="range" id="rag-o-peer" min="5"   max="100" step="5"  value="40"  style="flex:1;accent-color:#ffcc00"><span class="color-hex" id="lbl-o-peer">40%</span></div>
+        <div class="stile-row"><label>Colore fili Spes</label>  <input type="color" id="rag-c-spes" value="#00ccff" style="width:44px;height:36px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px"></div>
+        <div class="stile-row"><label>Colore fili peer</label>  <input type="color" id="rag-c-peer" value="#ffcc00" style="width:44px;height:36px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px"></div>
       </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -1166,25 +1185,11 @@ const FONTS = [
   { name: 'Syne',    google: 'Syne:wght@400;700;800' },
 ];
 
-const FALLBACK = [
-  { Nome:'Collina del Barbagianni (rete Mondo Comunità e Famiglia)', Categoria:'Enti del Terzo Settore', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'Progetti di accoglienza, Agricoltura sociale', Lat:41.9622994, Lng:12.5562418, Collabora:'', DataContatto:'' },
-  { Nome:'Centro Casa Giocosa',           Categoria:'Enti del Terzo Settore', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.9300579, Lng:12.5371344, Collabora:'', DataContatto:'' },
-  { Nome:'Sant\'egidio Serpentara-Vigne Nuove', Categoria:'Enti del Terzo Settore', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.963033731903, Lng:12.5157021355822, Collabora:'', DataContatto:'' },
-  { Nome:'Parsec Coop Sociale Arl',       Categoria:'Enti del Terzo Settore', Stato:'Da contattare', Contatto:'', Note:'', Descrizione:'Prevenzione del danno uso sostanze, lotta alla tratta.', Lat:41.9454804, Lng:12.5301449, Collabora:'', DataContatto:'' },
-  { Nome:'Spes Contra Spem',              Categoria:'Enti del Terzo Settore', Stato:'Da contattare', Contatto:'', Note:'', Descrizione:'La cooperativa da cui parte tutto.', Lat:41.9601, Lng:12.5512271, Collabora:'', DataContatto:'' },
-  { Nome:'Eureka I coop',                 Categoria:'Enti del Terzo Settore', Stato:'Da contattare', Contatto:'', Note:'', Descrizione:'', Lat:41.9647676, Lng:12.5138049, Collabora:'', DataContatto:'' },
-  { Nome:'SPINOFF Roma ETS',              Categoria:'Enti del Terzo Settore', Stato:'Contattato', Contatto:'valerio: +39 338 795 0919', Note:'', Descrizione:'Laboratori, rassegne cinematografiche, attività educative.', Lat:41.9449213, Lng:12.531119, Collabora:'', DataContatto:'' },
-  { Nome:'Gruppo CIAO - San Ponziano',    Categoria:'Parrocchie, Enti religiosi, Scout', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.947469, Lng:12.5452074, Collabora:'', DataContatto:'' },
-  { Nome:'Club Nomentano',                Categoria:'Ambiente, Sport, Cibo', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.9376993, Lng:12.5546833, Collabora:'', DataContatto:'' },
-  { Nome:'Centro Anziani Salaria',        Categoria:'Centri Sociali, Culturali, Biblioteche', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.98414, Lng:12.50805, Collabora:'', DataContatto:'' },
-  { Nome:'Anticorpi',                     Categoria:'Centri Sociali, Culturali, Biblioteche', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'Lavorano con arte e disabilità', Lat:41.9818459, Lng:12.5101585, Collabora:'', DataContatto:'' },
-];
-
 /* ================================================================
-   STATO APPLICAZIONE (un oggetto unico — niente variabili globali sparse)
+   STATO APPLICAZIONE
    ================================================================ */
 const state = {
-  data:             [],          // dataset principale
+  data:             [],
   activeCategories: new Set(Object.keys(CAT_COLORS)),
   activeStato:      'tutti',
   searchQuery:      '',
@@ -1205,14 +1210,12 @@ const state = {
   refreshCountdown: 300,
   refreshTimer:     null,
   flyDebounce:      null,
-  _editAbort:       null,   // AbortController per i listener dell'edit panel
+  _editAbort:       null,
 };
 
 /* ================================================================
    UTILITY
    ================================================================ */
-
-/** Escaping HTML per prevenire XSS quando si inseriscono dati utente nel DOM */
 function esc(str) {
   if (!str) return '';
   return String(str)
@@ -1225,34 +1228,21 @@ function esc(str) {
 
 function isSpes(d) { return d.Nome === SPES_NAME; }
 
-/**
- * parseDate — parsing robusto delle date dal foglio Google Sheets.
- * Sheets può restituire formati diversi: "2024-03-15", "15/03/2024",
- * "3/15/2024" (locale US), "2024-03-15T00:00:00.000Z".
- * new Date("15/03/2024") → Invalid Date su alcuni browser.
- * Normalizziamo tutto a ISO yyyy-mm-dd prima di costruire il Date.
- */
 function parseDate(str) {
   if (!str) return null;
   const s = String(str).trim();
-  // Formato ISO o datetime ISO — ok direttamente
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s);
-  // Formato dd/mm/yyyy (italiano, da Sheets con locale it)
   const itMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (itMatch) {
     const [, d, m, y] = itMatch;
     return new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
   }
-  // Formato mm/dd/yyyy (locale US)
   const usMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (usMatch) {
-    // Ambiguo con it, ma se giorno > 12 è sicuramente US
     const [, a, b, y] = usMatch;
     if (parseInt(a) > 12) return new Date(`${y}-${a.padStart(2,'0')}-${b.padStart(2,'0')}`);
-    // Altrimenti assumiamo it (più probabile nel contesto)
     return new Date(`${y}-${b.padStart(2,'0')}-${a.padStart(2,'0')}`);
   }
-  // Fallback — lascia che il browser provi
   const d = new Date(s);
   return isNaN(d.getTime()) ? null : d;
 }
@@ -1332,6 +1322,23 @@ function esportaCSV() {
 }
 
 /* ================================================================
+   FALLBACK DATA
+   ================================================================ */
+const FALLBACK = [
+  { Nome:'Collina del Barbagianni (rete Mondo Comunità e Famiglia)', Categoria:'Enti del Terzo Settore', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'Progetti di accoglienza, Agricoltura sociale', Lat:41.9622994, Lng:12.5562418, Collabora:'', DataContatto:'' },
+  { Nome:'Centro Casa Giocosa',           Categoria:'Enti del Terzo Settore', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.9300579, Lng:12.5371344, Collabora:'', DataContatto:'' },
+  { Nome:'Sant\'egidio Serpentara-Vigne Nuove', Categoria:'Enti del Terzo Settore', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.963033731903, Lng:12.5157021355822, Collabora:'', DataContatto:'' },
+  { Nome:'Parsec Coop Sociale Arl',       Categoria:'Enti del Terzo Settore', Stato:'Da contattare', Contatto:'', Note:'', Descrizione:'Prevenzione del danno uso sostanze, lotta alla tratta.', Lat:41.9454804, Lng:12.5301449, Collabora:'', DataContatto:'' },
+  { Nome:'Spes Contra Spem',              Categoria:'Enti del Terzo Settore', Stato:'Da contattare', Contatto:'', Note:'', Descrizione:'La cooperativa da cui parte tutto.', Lat:41.9601, Lng:12.5512271, Collabora:'', DataContatto:'' },
+  { Nome:'Eureka I coop',                 Categoria:'Enti del Terzo Settore', Stato:'Da contattare', Contatto:'', Note:'', Descrizione:'', Lat:41.9647676, Lng:12.5138049, Collabora:'', DataContatto:'' },
+  { Nome:'SPINOFF Roma ETS',              Categoria:'Enti del Terzo Settore', Stato:'Contattato', Contatto:'valerio: +39 338 795 0919', Note:'', Descrizione:'Laboratori, rassegne cinematografiche, attività educative.', Lat:41.9449213, Lng:12.531119, Collabora:'', DataContatto:'' },
+  { Nome:'Gruppo CIAO - San Ponziano',    Categoria:'Parrocchie, Enti religiosi, Scout', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.947469, Lng:12.5452074, Collabora:'', DataContatto:'' },
+  { Nome:'Club Nomentano',                Categoria:'Ambiente, Sport, Cibo', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.9376993, Lng:12.5546833, Collabora:'', DataContatto:'' },
+  { Nome:'Centro Anziani Salaria',        Categoria:'Centri Sociali, Culturali, Biblioteche', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'', Lat:41.98414, Lng:12.50805, Collabora:'', DataContatto:'' },
+  { Nome:'Anticorpi',                     Categoria:'Centri Sociali, Culturali, Biblioteche', Stato:'In collaborazione', Contatto:'', Note:'', Descrizione:'Lavorano con arte e disabilità', Lat:41.9818459, Lng:12.5101585, Collabora:'', DataContatto:'' },
+];
+
+/* ================================================================
    LOAD DAL FOGLIO
    ================================================================ */
 async function loadFromSheet() {
@@ -1382,11 +1389,6 @@ async function loadFromSheet() {
 
 /* ================================================================
    SAVE RIGA
-   FIX: usiamo no-cors (necessario per Apps Script senza CORS header
-   configurati), ma tracciamo ottimisticamente e avvertiamo l'utente
-   in caso di errore di rete. Non possiamo leggere la risposta con
-   no-cors, quindi il feedback è "inviato" non "salvato con conferma".
-   Per avere conferma reale bisognerebbe configurare CORS in Apps Script.
    ================================================================ */
 async function saveRow(rowData) {
   setSyncStatus('saving', 'Salvataggio…');
@@ -1397,9 +1399,6 @@ async function saveRow(rowData) {
       headers: { 'Content-Type': 'text/plain' },
       body:    JSON.stringify(rowData),
     });
-    // Con no-cors non possiamo leggere la risposta, assumiamo successo se non
-    // c'è errore di rete. Per conferma reale configurare Access-Control-Allow-Origin
-    // nel doPost di Apps Script.
     setSyncStatus('ok', 'Inviato ✓');
     setTimeout(() => setSyncStatus('ok', 'Sincronizzato'), 2500);
     return true;
@@ -1427,7 +1426,7 @@ function filteredData() {
 }
 
 /* ================================================================
-   NAV — usa event delegation, niente onclick inline
+   NAV
    ================================================================ */
 document.getElementById('nav').addEventListener('click', e => {
   const tab = e.target.closest('.nav-tab');
@@ -1444,7 +1443,7 @@ document.getElementById('nav').addEventListener('click', e => {
 });
 
 /* ================================================================
-   DASHBOARD — event delegation
+   DASHBOARD
    ================================================================ */
 document.getElementById('dashboard').addEventListener('click', e => {
   const card = e.target.closest('.dash-card');
@@ -1453,7 +1452,6 @@ document.getElementById('dashboard').addEventListener('click', e => {
   state.activeStato = dash;
   document.querySelectorAll('.dash-card').forEach(c => c.classList.remove('active-filter'));
   card.classList.add('active-filter');
-  // Sincronizza bottoni stato
   document.querySelectorAll('.stato-btn').forEach(b => b.classList.toggle('active', b.dataset.stato === dash));
   renderList();
   renderMarkers();
@@ -1513,7 +1511,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('list-count').textContent = items.length + ' realtà';
 
-    // Costruiamo il DOM in modo sicuro (no innerHTML con dati utente)
     const container = document.getElementById('list-container');
     container.innerHTML = '';
     const frag = document.createDocumentFragment();
@@ -1535,7 +1532,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const nameEl = document.createElement('div');
       nameEl.className = 'item-name';
-      nameEl.textContent = d.Nome; // textContent — sicuro
+      nameEl.textContent = d.Nome;
 
       const metaEl = document.createElement('div');
       metaEl.className = 'item-meta';
@@ -1619,7 +1616,7 @@ document.addEventListener('DOMContentLoaded', () => {
         icon: makeIcon(color, state.selectedIndex === d._i, isSpes(d)),
       }).addTo(state.map);
       m._di = d._i;
-      m.on('click', () => App.selectItem(m._di)); // click handler — fonte unica
+      m.on('click', () => App.selectItem(m._di));
       state.markers.push(m);
 
       if (state.showLabels) {
@@ -1635,11 +1632,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  // Registra su App — accessibile da loadFromSheet, drawRagnatela, ecc.
   App.renderMarkers = renderMarkers;
 
-  /* --- SELECT ITEM --- */
-  // FIX: debounce flyTo per evitare animazioni in coda rapida
+  /* --- FLY TO (debounced) --- */
   function flyToDebounced(lat, lng, zoom) {
     if (state.flyDebounce) {
       state.map.stop();
@@ -1651,25 +1646,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 80);
   }
 
+  /* --- SELECT ITEM --- */
   function selectItem(idx) {
     state.selectedIndex = idx;
     const d = DATA()[idx];
     if (!d) return;
     const color = CAT_COLORS[d.Categoria] || '#aaa';
 
-    // Aggiorna lista
     document.querySelectorAll('.list-item').forEach(el => el.classList.remove('selected'));
     const el = document.querySelector(`[data-idx="${idx}"]`);
     if (el) { el.classList.add('selected'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 
-    // Aggiorna mappa
     flyToDebounced(d.Lat, d.Lng, 15);
     state.markers.forEach(m => {
       const md = DATA()[m._di];
       m.setIcon(makeIcon(CAT_COLORS[md?.Categoria] || '#aaa', m._di === idx, isSpes(md)));
     });
 
-    // Popup — costruiamo tutto con textContent/createElement per sicurezza XSS
     const wrap = document.createElement('div');
     wrap.className = 'popup-wrap';
 
@@ -1736,16 +1729,23 @@ document.addEventListener('DOMContentLoaded', () => {
     actions.appendChild(editBtn);
     wrap.appendChild(actions);
 
-    L.popup({ maxWidth: 310 })
+    // Su mobile: posiziona il popup centrato in basso nella viewport
+    const popupOptions = { maxWidth: 310 };
+    if (window.innerWidth <= 768) {
+      popupOptions.autoPan = true;
+      popupOptions.autoPanPaddingTopLeft = L.point(16, 60);
+      popupOptions.autoPanPaddingBottomRight = L.point(16, 80);
+    }
+
+    L.popup(popupOptions)
       .setLatLng([d.Lat, d.Lng])
       .setContent(wrap)
       .openOn(state.map);
 
-    // Su mobile, chiudi sidebar dopo selezione
     if (isMobile() && state.mobileSidebarOpen) toggleMobileSidebar();
   }
 
-  /* --- GOTO (lampeggio marker senza selezionare) --- */
+  /* --- GOTO --- */
   function gotoItem(idx) {
     const d = DATA()[idx];
     if (!d) return;
@@ -1764,16 +1764,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* --- EVENT DELEGATION: lista e bottoni goto --- */
+  /* --- EVENT DELEGATION: lista --- */
   document.getElementById('list-container').addEventListener('click', e => {
     const gotoBtn = e.target.closest('[data-goto]');
     if (gotoBtn) { e.stopPropagation(); gotoItem(Number(gotoBtn.dataset.goto)); return; }
     const item = e.target.closest('.list-item');
     if (item) selectItem(Number(item.dataset.idx));
   });
-
-  // Click handler aggiunto direttamente dentro renderMarkers (vedi sotto).
-  // Nessun wrapper separato necessario.
 
   /* --- EDIT PANEL --- */
   function setDirty(val) {
@@ -1794,7 +1791,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-feedback').style.color  = '';
     setDirty(false);
 
-    // Costruisci lista collaborazioni
     const cur  = (d.Collabora || '').split(',').map(s => s.trim()).filter(Boolean);
     const list = document.getElementById('collab-list');
     list.innerHTML = '';
@@ -1818,8 +1814,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     list.appendChild(frag);
 
-    // Usa AbortController per rimuovere i listener pulitamente alla chiusura
-    // (evita accumulo: ogni apertura crea un nuovo controller, closeEdit lo cancella)
     if (state._editAbort) state._editAbort.abort();
     state._editAbort = new AbortController();
     const { signal } = state._editAbort;
@@ -1831,7 +1825,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('edit-panel').classList.add('open');
 
-    // Trasferisci il focus al primo campo — accessibilità e UX
     setTimeout(() => {
       const first = document.getElementById('edit-stato');
       if (first) first.focus();
@@ -1843,9 +1836,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('edit-panel').classList.remove('open');
     setDirty(false);
     state.editingIndex = null;
-    // AbortController cancella tutti i listener aggiunti in openEdit — zero leak
     if (state._editAbort) { state._editAbort.abort(); state._editAbort = null; }
-    // Reimposta il bottom dell'edit panel (potrebbe essere stato spostato dalla tastiera)
     document.getElementById('edit-panel').style.bottom = '';
   }
 
@@ -1897,7 +1888,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* --- BINDING EDIT PANEL --- */
   document.getElementById('save-btn').addEventListener('click', saveEdit);
   document.getElementById('cancel-btn').addEventListener('click', closeEditGuard);
 
@@ -1977,11 +1967,10 @@ document.addEventListener('DOMContentLoaded', () => {
     renderList(); App.renderMarkers();
   });
 
-  /* --- SEARCH — debounced 150ms per non ricalcolare ad ogni keystroke --- */
+  /* --- SEARCH --- */
   let _searchDebounce = null;
   document.getElementById('search-input').addEventListener('input', e => {
     state.searchQuery = e.target.value;
-    // Aggiorna il contatore subito (feedback visivo immediato)
     const countEl = document.getElementById('list-count');
     if (countEl) countEl.textContent = '…';
     clearTimeout(_searchDebounce);
@@ -2035,14 +2024,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.mobileSidebarOpen) toggleMobileSidebar();
   });
 
-  /* --- TOUCH SWIPE sulla sidebar mobile --- */
+  /* --- SWIPE --- */
   setupSwipeToClose();
 
-  /* --- PULL TO REFRESH sulla lista mobile --- */
+  /* --- PULL TO REFRESH --- */
   setupPullToRefresh();
 
   /* --- LEGENDA --- */
-  const legendEl = document.getElementById('map');
   const legendDiv = document.createElement('div');
   legendDiv.id = 'legend';
   legendDiv.innerHTML = '<h4>Categorie</h4>' +
@@ -2052,13 +2040,11 @@ document.addEventListener('DOMContentLoaded', () => {
     `<div class="leg-row" style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px"><div class="leg-dot" style="background:#ffcc00"></div><span style="font-weight:700">Spes</span></div>`;
   document.getElementById('map-area').appendChild(legendDiv);
 
-  /* --- MAP INVALIDATE su resize --- */
-  const resizeObserver = new ResizeObserver(() => {
-    state.map.invalidateSize();
-  });
+  /* --- RESIZE --- */
+  const resizeObserver = new ResizeObserver(() => { state.map.invalidateSize(); });
   resizeObserver.observe(document.getElementById('map'));
 
-  /* --- VISUAL VIEWPORT: gestione tastiera virtuale (iOS/Android) --- */
+  /* --- TASTIERA VIRTUALE --- */
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', () => {
       const panel = document.getElementById('edit-panel');
@@ -2069,7 +2055,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* --- PREVENT UNLOAD con unsaved changes --- */
+  /* --- UNLOAD GUARD --- */
   window.addEventListener('beforeunload', e => {
     if (state.hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; }
   });
@@ -2087,21 +2073,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ================================================================
-   App — namespace pubblico per funzioni che devono attraversare scope.
-   Tutto ciò che viene chiamato da loadFromSheet, drawRagnatela o
-   da altri contesti esterni a DOMContentLoaded va registrato qui.
-   NON usare window.* direttamente: registra su App e chiama App.fn().
+   App namespace
    ================================================================ */
 const App = {
-  renderMarkers:    () => {},  // riempito da DOMContentLoaded
+  renderMarkers:    () => {},
   renderList:       () => {},
   buildCatFilters:  () => {},
   selectItem:       () => {},
 };
 
-/* ================================================================
-   DATA() — accessor per leggere state.data (uso in closures esterne)
-   ================================================================ */
 function DATA() { return state.data; }
 
 /* ================================================================
@@ -2118,7 +2098,6 @@ function toggleMobileSidebar() {
 
 window.addEventListener('resize', () => {
   if (!isMobile()) {
-    // Assicurati che la sidebar sia visibile su desktop
     state.mobileSidebarOpen = false;
     document.getElementById('sidebar').classList.remove('mobile-open');
     document.getElementById('mobile-overlay').classList.remove('visible');
@@ -2127,7 +2106,7 @@ window.addEventListener('resize', () => {
 });
 
 /* ================================================================
-   SWIPE TO CLOSE SIDEBAR (touch events)
+   SWIPE TO CLOSE SIDEBAR
    ================================================================ */
 function setupSwipeToClose() {
   const sidebar = document.getElementById('sidebar');
@@ -2154,21 +2133,20 @@ function setupSwipeToClose() {
 }
 
 /* ================================================================
-   PULL-TO-REFRESH sulla lista mobile
-   Trascina la lista verso il basso quando è in cima per ricaricare.
+   PULL-TO-REFRESH
    ================================================================ */
 function setupPullToRefresh() {
-  const list     = document.getElementById('list-container');
+  const list      = document.getElementById('list-container');
   const indicator = document.getElementById('ptr-indicator');
-  const label    = document.getElementById('ptr-label');
-  let startY     = 0;
-  let pulling    = false;
-  let triggered  = false;
-  const THRESHOLD = 72; // px da trascinare prima di triggerare
+  const label     = document.getElementById('ptr-label');
+  let startY      = 0;
+  let pulling     = false;
+  let triggered   = false;
+  const THRESHOLD = 72;
 
   list.addEventListener('touchstart', e => {
     if (!isMobile()) return;
-    if (list.scrollTop > 0) return; // solo se la lista è in cima
+    if (list.scrollTop > 0) return;
     startY   = e.touches[0].clientY;
     pulling  = true;
     triggered = false;
@@ -2194,7 +2172,6 @@ function setupPullToRefresh() {
     if (!pulling || !isMobile()) return;
     pulling = false;
     if (triggered) {
-      // Mostra spinner e ricarica
       indicator.classList.add('ptr-loading');
       label.textContent = 'Aggiornamento…';
       indicator.style.height = '44px';
@@ -2271,14 +2248,23 @@ async function inviaSuggerimento() {
 /* ================================================================
    RAGNATELA
    ================================================================ */
+function getRagDash(type) {
+  const sel = document.getElementById('rag-dash-' + type);
+  const val = sel ? sel.value : 'solid';
+  if (val === 'solid')  return null;
+  if (val === 'dashed') return '8 6';
+  if (val === 'dotted') return '2 5';
+  return null;
+}
+
 function getRagStyle() {
   return {
-    wS: parseFloat(document.getElementById('rag-w-spes')?.value || 1.5),
-    oS: parseFloat(document.getElementById('rag-o-spes')?.value || 45) / 100,
-    wP: parseFloat(document.getElementById('rag-w-peer')?.value || 0.8),
-    oP: parseFloat(document.getElementById('rag-o-peer')?.value || 15) / 100,
-    cS: document.getElementById('rag-c-spes')?.value || '#ffcc00',
-    cP: document.getElementById('rag-c-peer')?.value || '#ffffff',
+    wS: parseFloat(document.getElementById('rag-w-spes')?.value || 2),
+    oS: parseFloat(document.getElementById('rag-o-spes')?.value || 65) / 100,
+    wP: parseFloat(document.getElementById('rag-w-peer')?.value || 1.2),
+    oP: parseFloat(document.getElementById('rag-o-peer')?.value || 40) / 100,
+    cS: document.getElementById('rag-c-spes')?.value || '#00ccff',  /* azzurro acceso per Spes */
+    cP: document.getElementById('rag-c-peer')?.value || '#ffcc00',  /* giallo per peer-to-peer */
   };
 }
 
@@ -2319,6 +2305,7 @@ function drawRagnatela() {
   const edges     = new Map();
 
   state.data.forEach(d => {
+    /* Fili Spes: realtà In collaborazione → Spes (azzurro acceso) */
     if (d.Stato === 'In collaborazione' && !isSpes(d)) {
       const spes = state.data.find(x => isSpes(x));
       if (spes) {
@@ -2326,6 +2313,7 @@ function drawRagnatela() {
         if (!edges.has(key)) edges.set(key, { dA: d, dB: spes, type: 'spes' });
       }
     }
+    /* Fili peer: collaborazioni tra realtà (giallo) */
     (d.Collabora || '').split(',').map(s => s.trim()).filter(Boolean).forEach(name => {
       const dB  = state.data.find(x => x.Nome === name);
       if (!dB) return;
@@ -2346,7 +2334,7 @@ function drawRagnatela() {
       color:    isSC ? s.cS : s.cP,
       opacity:  isSC ? s.oS : s.oP,
       weight:   isSC ? s.wS : s.wP,
-      dashArray: isSC ? null : '3 5',
+      dashArray: isSC ? getRagDash('spes') : getRagDash('peer'),
     }).addTo(state.ragMap);
     state.ragLayers.push(line);
     involved.add(dA.Nome);
@@ -2382,7 +2370,7 @@ function drawRagnatela() {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('rag-focus').addEventListener('change', drawRagnatela);
 
-  ['rag-w-spes','rag-o-spes','rag-w-peer','rag-o-peer','rag-c-spes','rag-c-peer'].forEach(id => {
+  ['rag-w-spes','rag-o-spes','rag-w-peer','rag-o-peer','rag-c-spes','rag-c-peer','rag-dash-spes','rag-dash-peer'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('input', () => {
@@ -2508,7 +2496,6 @@ function buildFontGrid() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Stile controls
   ['color-accent','color-bg','color-ink','color-spes'].forEach(id => {
     document.getElementById(id).addEventListener('input', livePreview);
   });
