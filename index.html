@@ -747,33 +747,8 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
   .edit-actions { flex-wrap: wrap; }
   .save-btn, .cancel-btn { padding: 12px 18px; font-size: .84rem; }
 
-  /* --- POPUP MOBILE: centrato, non troncato --- */
-  .leaflet-popup {
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    margin-left: 0 !important;
-  }
-  .leaflet-popup-content-wrapper {
-    max-width: calc(100vw - 32px) !important;
-    width: calc(100vw - 32px) !important;
-    left: auto !important;
-  }
-  .leaflet-popup-content {
-    width: auto !important;
-    max-width: 100% !important;
-    margin: 13px 14px !important;
-  }
-  .popup-wrap {
-    min-width: 0 !important;
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-  .popup-nome {
-    font-size: .88rem !important;
-    white-space: normal !important;
-    word-break: break-word !important;
-  }
-  .leaflet-popup-tip-container { display: none; }
+  /* --- POPUP MOBILE: Leaflet nascosto, rimpiazzato da bottom sheet --- */
+  .leaflet-popup { display: none !important; }
 
   /* --- MODALE SUGGERISCI: bottom sheet --- */
   #suggerisci-modal {
@@ -844,8 +819,76 @@ body.presenting #edit-panel { left: 0; }
   pointer-events: none;
   white-space: nowrap;
 }
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-</style>
+/* ================================================================
+   MOBILE POPUP BOTTOM SHEET
+   ================================================================ */
+#mobile-popup {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 1200;
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  border-top: 3px solid var(--accent);
+  box-shadow: 0 -6px 32px rgba(0,0,0,.18);
+  padding: 0 0 calc(12px + var(--safe-bottom));
+  transform: translateY(100%);
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  max-height: 72dvh;
+  overflow: hidden;
+  flex-direction: column;
+}
+#mobile-popup.open {
+  display: flex;
+  transform: translateY(0);
+}
+/* drag handle */
+#mobile-popup-handle {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 4px;
+  cursor: grab;
+}
+#mobile-popup-handle::before {
+  content: '';
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+}
+#mobile-popup-header {
+  flex-shrink: 0;
+  padding: 4px 18px 10px;
+  border-bottom: 1px solid var(--border);
+}
+#mobile-popup-nome {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--ink);
+  word-break: break-word;
+  margin-bottom: 5px;
+}
+#mobile-popup-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 18px;
+}
+#mobile-popup-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem;
+  cursor: pointer;
+  color: var(--muted);
+  line-height: 1;
+}
+
 </head>
 <body>
 
@@ -862,6 +905,20 @@ body.presenting #edit-panel { left: 0; }
      TOAST
      ================================================================ -->
 <div id="toast"></div>
+
+<!-- ================================================================
+     MOBILE POPUP BOTTOM SHEET
+     ================================================================ -->
+<div id="mobile-popup" role="dialog" aria-modal="true" aria-labelledby="mobile-popup-nome">
+  <button id="mobile-popup-close" aria-label="Chiudi">✕</button>
+  <div id="mobile-popup-handle"></div>
+  <div id="mobile-popup-header">
+    <div id="mobile-popup-spes-tag" style="display:none"></div>
+    <div id="mobile-popup-nome"></div>
+    <div id="mobile-popup-meta" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px"></div>
+  </div>
+  <div id="mobile-popup-body"></div>
+</div>
 
 <div id="app">
 
@@ -1657,11 +1714,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.querySelector(`[data-idx="${idx}"]`);
     if (el) { el.classList.add('selected'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 
-    flyToDebounced(d.Lat, d.Lng, 15);
     state.markers.forEach(m => {
       const md = DATA()[m._di];
       m.setIcon(makeIcon(CAT_COLORS[md?.Categoria] || '#aaa', m._di === idx, isSpes(md)));
     });
+
+    // Su mobile: bottom sheet centrato, non popup Leaflet
+    if (isMobile()) {
+      openMobilePopup(d, idx);
+      // Pan gentile verso il punto, con offset verso l'alto per tenere il marker visibile
+      if (state.flyDebounce) { state.map.stop(); clearTimeout(state.flyDebounce); }
+      state.flyDebounce = setTimeout(() => {
+        const mapEl   = document.getElementById('map');
+        const mapH    = mapEl.offsetHeight;
+        // Vogliamo il marker a circa 1/3 dall'alto, lasciando spazio al bottom sheet (72dvh)
+        const targetY = mapH * 0.28;
+        const pt = state.map.project([d.Lat, d.Lng], state.map.getZoom());
+        pt.y += (mapH / 2) - targetY;
+        const newCenter = state.map.unproject(pt, state.map.getZoom());
+        state.map.flyTo(newCenter, Math.max(state.map.getZoom(), 14), { duration: .6 });
+        state.flyDebounce = null;
+      }, 80);
+      if (state.mobileSidebarOpen) toggleMobileSidebar();
+      return;
+    }
+
+    // Desktop: popup Leaflet classico
+    flyToDebounced(d.Lat, d.Lng, 15);
 
     const wrap = document.createElement('div');
     wrap.className = 'popup-wrap';
@@ -1729,21 +1808,121 @@ document.addEventListener('DOMContentLoaded', () => {
     actions.appendChild(editBtn);
     wrap.appendChild(actions);
 
-    // Su mobile: posiziona il popup centrato in basso nella viewport
-    const popupOptions = { maxWidth: 310 };
-    if (window.innerWidth <= 768) {
-      popupOptions.autoPan = true;
-      popupOptions.autoPanPaddingTopLeft = L.point(16, 60);
-      popupOptions.autoPanPaddingBottomRight = L.point(16, 80);
-    }
-
-    L.popup(popupOptions)
+    L.popup({ maxWidth: 310 })
       .setLatLng([d.Lat, d.Lng])
       .setContent(wrap)
       .openOn(state.map);
-
-    if (isMobile() && state.mobileSidebarOpen) toggleMobileSidebar();
   }
+
+  /* --- MOBILE POPUP BOTTOM SHEET --- */
+  function openMobilePopup(d, idx) {
+    const color = CAT_COLORS[d.Categoria] || '#aaa';
+    const cls   = STATO_CLASS[d.Stato] || 'stato-da';
+
+    // Header
+    const speTag = document.getElementById('mobile-popup-spes-tag');
+    if (isSpes(d)) {
+      speTag.style.display = 'inline-block';
+      speTag.className = 'popup-spes-tag';
+      speTag.textContent = '⭐ Punto di origine della rete';
+    } else {
+      speTag.style.display = 'none';
+    }
+
+    document.getElementById('mobile-popup-nome').textContent = d.Nome;
+
+    const meta = document.getElementById('mobile-popup-meta');
+    meta.innerHTML = '';
+    const catSpan = document.createElement('span');
+    catSpan.style.cssText = `display:flex;align-items:center;gap:4px;font-size:.69rem;color:var(--muted);font-weight:600`;
+    catSpan.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>`;
+    catSpan.appendChild(document.createTextNode(CAT_LABELS[d.Categoria] || d.Categoria));
+    const bdg = document.createElement('span');
+    bdg.className = 'stato-badge ' + cls;
+    bdg.textContent = d.Stato;
+    meta.appendChild(catSpan);
+    meta.appendChild(bdg);
+
+    // Body
+    const body = document.getElementById('mobile-popup-body');
+    body.innerHTML = '';
+
+    if (isStale(d)) {
+      const sw = document.createElement('div');
+      sw.style.cssText = 'font-size:.7rem;color:#a05000;background:#fff0e0;border-radius:5px;padding:6px 10px;margin-bottom:10px';
+      sw.textContent = `⏰ Non contattato da più di ${STALE_DAYS} giorni`;
+      body.appendChild(sw);
+    }
+
+    if (d.Descrizione) {
+      const desc = document.createElement('div');
+      desc.className = 'popup-desc';
+      desc.style.cssText = 'font-size:.82rem;line-height:1.6;color:#333355;background:var(--bg);border-radius:6px;padding:9px 11px;margin-bottom:10px';
+      desc.textContent = d.Descrizione;
+      body.appendChild(desc);
+    }
+
+    const addField = (content, labelText) => {
+      if (!content) return;
+      const f = document.createElement('div');
+      f.style.cssText = 'font-size:.78rem;margin-bottom:8px';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = 'font-weight:700;color:var(--muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px';
+      lbl.textContent = labelText;
+      const val = document.createElement('div');
+      val.textContent = content;
+      f.appendChild(lbl);
+      f.appendChild(val);
+      body.appendChild(f);
+    };
+    addField(d.Contatto,    'Referente');
+    addField(d.DataContatto,'Ultimo contatto');
+    addField(d.Note,        'Note');
+    addField(d.Collabora,   'Collabora con');
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'popup-btn';
+    editBtn.style.cssText = 'margin-top:10px;width:100%;min-height:44px;font-size:.84rem';
+    editBtn.textContent = '✏ Modifica';
+    editBtn.addEventListener('click', () => { closeMobilePopup(); openEdit(idx); });
+    body.appendChild(editBtn);
+
+    // Scroll body in cima
+    body.scrollTop = 0;
+
+    // Apri
+    const panel = document.getElementById('mobile-popup');
+    panel.classList.add('open');
+  }
+
+  function closeMobilePopup() {
+    const panel = document.getElementById('mobile-popup');
+    panel.classList.remove('open');
+    // Rimetti il marker deselezionato
+  }
+
+  document.getElementById('mobile-popup-close').addEventListener('click', closeMobilePopup);
+
+  // Chiudi toccando la mappa (fuori dal panel)
+  document.getElementById('map').addEventListener('click', () => {
+    if (isMobile()) closeMobilePopup();
+  });
+
+  // Swipe-down per chiudere
+  (function() {
+    const panel = document.getElementById('mobile-popup');
+    let startY = 0, dragging = false;
+    panel.addEventListener('touchstart', e => {
+      startY = e.touches[0].clientY; dragging = false;
+    }, { passive: true });
+    panel.addEventListener('touchmove', e => {
+      if (e.touches[0].clientY - startY > 8) dragging = true;
+    }, { passive: true });
+    panel.addEventListener('touchend', e => {
+      if (dragging && e.changedTouches[0].clientY - startY > 80) closeMobilePopup();
+      dragging = false;
+    }, { passive: true });
+  })();
 
   /* --- GOTO --- */
   function gotoItem(idx) {
