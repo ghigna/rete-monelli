@@ -571,7 +571,26 @@ function openSheet(d,idx){
   meta.appendChild(cs);meta.appendChild(bdg);
   const body=document.getElementById('mob-sheet-body');body.innerHTML='';
   if(isStale(d)){const w=document.createElement('div');w.style.cssText='font-size:.7rem;color:#a05000;background:#fff0e0;border-radius:5px;padding:6px 10px;margin-bottom:10px';w.textContent=`⏰ Non contattato da più di ${STALE_DAYS} giorni`;body.appendChild(w);}
-  if(d.Descrizione){const desc=document.createElement('div');desc.style.cssText='font-size:.82rem;line-height:1.6;color:#333355;background:var(--bg);border-radius:6px;padding:9px 11px;margin-bottom:10px';desc.textContent=d.Descrizione;body.appendChild(desc);}
+  if(d.Descrizione){
+    const descWrap=document.createElement('div');
+    const desc=document.createElement('div');
+    desc.style.cssText='font-size:.82rem;line-height:1.6;color:#333355;background:var(--bg);border-radius:6px;padding:9px 11px;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden';
+    desc.textContent=d.Descrizione;
+    descWrap.appendChild(desc);
+    const moreBtn=document.createElement('button');
+    moreBtn.style.cssText='font-size:.72rem;color:var(--accent);background:none;border:none;cursor:pointer;padding:0 0 10px 2px;font-family:var(--font);font-weight:700;display:none';
+    moreBtn.textContent='Mostra altro ▼';
+    let _exp=false;
+    moreBtn.addEventListener('click',()=>{
+      _exp=!_exp;
+      if(_exp){desc.style.display='block';desc.style.overflow='visible';}
+      else{desc.style.display='-webkit-box';desc.style.webkitLineClamp='4';desc.style.overflow='hidden';}
+      moreBtn.textContent=_exp?'Mostra meno ▲':'Mostra altro ▼';
+    });
+    descWrap.appendChild(moreBtn);
+    body.appendChild(descWrap);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{if(desc.scrollHeight>desc.clientHeight+2)moreBtn.style.display='block';}));
+  }
   const af=(content,label)=>{if(!content)return;const f=document.createElement('div');f.style.cssText='font-size:.78rem;margin-bottom:8px';const l=document.createElement('div');l.style.cssText='font-weight:700;color:var(--muted);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px';l.textContent=label;const v=document.createElement('div');v.textContent=content;f.appendChild(l);f.appendChild(v);body.appendChild(f);};
   af(d.Contatto,'Referente');af(d.DataContatto,'Ultimo contatto');af(d.Note,'Note');af(d.Collabora,'Collabora con');
   const eb=document.createElement('button');eb.className='popup-btn';eb.style.cssText='margin-top:10px;width:100%;min-height:44px;font-size:.84rem';eb.textContent='✏ Modifica';
@@ -766,7 +785,27 @@ document.addEventListener('DOMContentLoaded',()=>{
     const badge=document.createElement('span');badge.className='stato-badge '+(STATO_CLASS[d.Stato]||'stato-da');badge.textContent=d.Stato;wrap.appendChild(badge);
     if(isStale(d)){const sw=document.createElement('div');sw.style.cssText='font-size:.7rem;color:#a05000;background:#fff0e0;border-radius:5px;padding:4px 8px;margin:6px 0';sw.textContent=`⏰ Non contattato da più di ${STALE_DAYS} giorni`;wrap.appendChild(sw);}
     const af=(content,label)=>{if(!content)return;const f=document.createElement('div');f.className='popup-field';const l=document.createElement('label');l.textContent=label;const v=document.createElement('span');v.textContent=content;f.appendChild(l);f.appendChild(v);wrap.appendChild(f);};
-    if(d.Descrizione){const desc=document.createElement('div');desc.className='popup-desc';desc.textContent=d.Descrizione;wrap.appendChild(desc);}
+    if(d.Descrizione){
+      const descWrap=document.createElement('div');
+      const desc=document.createElement('div');
+      desc.className='popup-desc';
+      desc.style.cssText='display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden';
+      desc.textContent=d.Descrizione;
+      descWrap.appendChild(desc);
+      const moreBtn=document.createElement('button');
+      moreBtn.style.cssText='font-size:.7rem;color:var(--accent);background:none;border:none;cursor:pointer;padding:2px 0 4px;font-family:var(--font);font-weight:700;display:none';
+      moreBtn.textContent='Mostra altro ▼';
+      let _exp=false;
+      moreBtn.addEventListener('click',()=>{
+        _exp=!_exp;
+        if(_exp){desc.style.display='block';desc.style.overflow='visible';}
+        else{desc.style.display='-webkit-box';desc.style.webkitLineClamp='4';desc.style.overflow='hidden';}
+        moreBtn.textContent=_exp?'Mostra meno ▲':'Mostra altro ▼';
+      });
+      descWrap.appendChild(moreBtn);
+      wrap.appendChild(descWrap);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{if(desc.scrollHeight>desc.clientHeight+2)moreBtn.style.display='block';}));
+    }
     af(d.Contatto,'Referente');af(d.DataContatto,'Ultimo contatto');af(d.Note,'Note');af(d.Collabora,'Collabora con');
     const actions=document.createElement('div');actions.className='popup-actions';const eb=document.createElement('button');eb.className='popup-btn';eb.textContent='✏ Modifica';eb.addEventListener('click',()=>openEdit(idx));actions.appendChild(eb);wrap.appendChild(actions);
     L.popup({maxWidth:310}).setLatLng([d.Lat,d.Lng]).setContent(wrap).openOn(state.map);
