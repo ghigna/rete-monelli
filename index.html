@@ -649,7 +649,7 @@ function getRagStyle(){return{wS:parseFloat(document.getElementById('rag-w-spes'
 function initRagnatela(){
   if(!state.ragMap){
     state.ragMap=L.map('ragnatela-map',{zoomControl:true,attributionControl:false}).setView(state.map?state.map.getCenter():[41.945,12.55],state.map?state.map.getZoom():12);
-   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(state.map);
+   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(state.ragMap);
   }else{if(state.map)state.ragMap.setView(state.map.getCenter(),state.map.getZoom());}
   setTimeout(()=>{
     state.ragMap.invalidateSize();
